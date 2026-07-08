@@ -373,44 +373,6 @@ func (h *Handler) CreateDocument(c *fiber.Ctx) error {
 }
 ```
 
-## Roadmap
-
-### v1.0 (Current)
-- ✅ Request
-- ✅ Response
-- ✅ Errors
-- ✅ Nullable
-- ✅ Convert
-- ✅ JSON
-- ✅ Validator
-- ✅ Context interface
-- ✅ Fiber adapter
-
-### v1.1 (Planned)
-- Mapper
-- Pagination
-- Filter
-- Generic Mapping
-
-### v1.2 (Planned)
-- Gin Adapter
-- Echo Adapter
-- net/http Adapter
-
-### v1.3 (Planned)
-- Middleware
-- Request ID
-- Recovery
-- Logger integration
-
-### v2.0 (Planned)
-- OpenAPI generation
-- Swagger integration
-- DTO code generation
-- Mapper code generation
-- Validation tags
-- Plugin system
-
 ## License
 
 OTMC License

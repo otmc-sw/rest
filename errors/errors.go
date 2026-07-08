@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @License OTMC License
  * @Copyright (c) 2026 OTMC Softwares. All rights reserved.
  * @Contributors Trung Ng, OTMC Authors.
@@ -13,7 +13,6 @@ import (
 	"time"
 )
 
-// ErrorDetails represents standard REST error structure
 type ErrorDetails struct {
 	Code      int         `json:"code"`               // HTTP status code: 400, 404, 500, ...
 	Key       string      `json:"key"`                // Error key: BAD_REQUEST, NOT_FOUND, INTERNAL_SERVER_ERROR, ...
@@ -29,19 +28,16 @@ type ErrorDetails struct {
 	Timestamp string      `json:"timestamp"`          // ISO timestamp
 }
 
-// Error represents a REST error response
 type Error struct {
 	Success bool         `json:"success"`
 	Error   ErrorDetails `json:"error"`
 }
 
-// Builder provides fluent API for building errors
 type Builder struct {
 	details ErrorDetails
 	skip     int
 }
 
-// New creates a new error builder
 func New() *Builder {
 	return &Builder{
 		details: ErrorDetails{
@@ -51,7 +47,6 @@ func New() *Builder {
 	}
 }
 
-// BadRequest sets error to 400 Bad Request
 func (b *Builder) BadRequest() *Builder {
 	b.details.Code = 400
 	b.details.Key = "BAD_REQUEST"
@@ -59,7 +54,6 @@ func (b *Builder) BadRequest() *Builder {
 	return b
 }
 
-// Unauthorized sets error to 401 Unauthorized
 func (b *Builder) Unauthorized() *Builder {
 	b.details.Code = 401
 	b.details.Key = "UNAUTHORIZED"
@@ -67,7 +61,6 @@ func (b *Builder) Unauthorized() *Builder {
 	return b
 }
 
-// Forbidden sets error to 403 Forbidden
 func (b *Builder) Forbidden() *Builder {
 	b.details.Code = 403
 	b.details.Key = "FORBIDDEN"
@@ -75,7 +68,6 @@ func (b *Builder) Forbidden() *Builder {
 	return b
 }
 
-// NotFound sets error to 404 Not Found
 func (b *Builder) NotFound() *Builder {
 	b.details.Code = 404
 	b.details.Key = "NOT_FOUND"
@@ -83,7 +75,6 @@ func (b *Builder) NotFound() *Builder {
 	return b
 }
 
-// Conflict sets error to 409 Conflict
 func (b *Builder) Conflict() *Builder {
 	b.details.Code = 409
 	b.details.Key = "CONFLICT"
@@ -91,7 +82,6 @@ func (b *Builder) Conflict() *Builder {
 	return b
 }
 
-// UnprocessableEntity sets error to 422 Unprocessable Entity
 func (b *Builder) UnprocessableEntity() *Builder {
 	b.details.Code = 422
 	b.details.Key = "UNPROCESSABLE_ENTITY"
@@ -99,7 +89,6 @@ func (b *Builder) UnprocessableEntity() *Builder {
 	return b
 }
 
-// InternalError sets error to 500 Internal Server Error
 func (b *Builder) InternalError() *Builder {
 	b.details.Code = 500
 	b.details.Key = "INTERNAL_SERVER_ERROR"
@@ -107,7 +96,6 @@ func (b *Builder) InternalError() *Builder {
 	return b
 }
 
-// ServiceUnavailable sets error to 503 Service Unavailable
 func (b *Builder) ServiceUnavailable() *Builder {
 	b.details.Code = 503
 	b.details.Key = "SERVICE_UNAVAILABLE"
@@ -115,61 +103,51 @@ func (b *Builder) ServiceUnavailable() *Builder {
 	return b
 }
 
-// Code sets custom HTTP status code
 func (b *Builder) Code(code int) *Builder {
 	b.details.Code = code
 	return b
 }
 
-// Key sets error key
 func (b *Builder) Key(key string) *Builder {
 	b.details.Key = key
 	return b
 }
 
-// Type sets error type
 func (b *Builder) Type(typ string) *Builder {
 	b.details.Type = typ
 	return b
 }
 
-// Summary sets error summary
 func (b *Builder) Summary(summary string) *Builder {
 	b.details.Summary = summary
 	return b
 }
 
-// Detail sets error detail
 func (b *Builder) Detail(detail interface{}) *Builder {
 	b.details.Detail = fmt.Sprint(detail)
 	return b
 }
 
-// Reason sets error reason
 func (b *Builder) Reason(reason string) *Builder {
 	b.details.Reason = reason
 	return b
 }
 
-// Request sets request body
 func (b *Builder) Request(req interface{}) *Builder {
 	b.details.Request = req
 	return b
 }
 
-// Data sets additional error data
 func (b *Builder) Data(data interface{}) *Builder {
 	b.details.Data = data
 	return b
 }
 
-// Skip sets the number of stack frames to skip for caller info
 func (b *Builder) Skip(skip int) *Builder {
 	b.skip = skip
 	return b
 }
 
-// Build finalizes the error and captures caller information
 func (b *Builder) Build() Error {
 	file, line, fn := getCallerInfo(b.skip)
 	b.details.File = file
@@ -181,7 +159,6 @@ func (b *Builder) Build() Error {
 	}
 }
 
-// getCallerInfo retrieves caller information
 func getCallerInfo(skip int) (file string, line int, funcName string) {
 	pc, file, line, ok := runtime.Caller(skip)
 	if !ok {
