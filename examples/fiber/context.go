@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @License Apache License 2.0
  * @Copyright (c) 2026 OTMC Softwares. OTMC Golang REST.
  * @Contributors Nguyen Van Trung, Nguyen Thi Hoai, OTMC Contributors.
@@ -13,8 +13,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// FiberContext adapts *fiber.Ctx to the rest.Context interface so the
-// framework-agnostic core can drive the request lifecycle.
 type FiberContext struct {
 	*fiber.Ctx
 }
