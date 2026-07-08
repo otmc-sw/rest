@@ -12,7 +12,7 @@ import (
 )
 
 type Context interface {
-	GetContext() context.Context
+	Context() context.Context
 
 	Param(key string) string
 
@@ -27,6 +27,12 @@ type Context interface {
 	Body() io.Reader
 
 	Bind(v interface{}) error
+
+	JSON(status int, body interface{}) error
+
+	Status(code int)
+
+	SetHeader(key, value string)
 
 	Method() string
 

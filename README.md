@@ -1,21 +1,34 @@
+/**
+ * @License OTMC License
+ * @Copyright (c) 2026 OTMC Softwares. All rights reserved.
+ * @Contributors Trung Ng, OTMC Authors.
+**/
+
 # 🚀 OTMC REST
 
-A modern, lightweight, extensible REST toolkit for Go.
+A modern, lightweight, extensible REST toolkit for Go — **100% framework independent**.
 
 ## 👁️ Vision
 
-OTMC REST is **not a web framework**. It is a reusable toolkit that helps developers build clean, consistent, and maintainable REST APIs while remaining framework agnostic.
+OTMC REST is **not a web framework** and it does **not depend on one**. It is a reusable
+toolkit that helps developers build clean, consistent, and maintainable REST APIs while
+remaining framework agnostic.
 
-### 🌐 Supported Frameworks
+The core library only knows about generic REST concepts. To talk to a transport layer
+(Fiber, Gin, Echo, Chi, net/http, …) you provide your own implementation of the
+[`context.Context`](context/context.go) interface — a tiny adapter. The core never imports
+any web framework.
+
+### 🌐 Bring Your Own Framework
 
 - 🧶 Fiber
-- 🍃 Gin (planned)
-- 🔔 Echo (planned)
-- 🥢 Chi (planned)
-- 🌐 net/http (planned)
-- 🔧 Custom adapters
+- 🍃 Gin
+- 🔔 Echo
+- 🥢 Chi
+- 🌐 net/http
+- 🔧 Any custom transport (CLI, gRPC gateway, test harness, …)
 
-The goal is to eliminate repetitive code found in almost every REST project:
+The core eliminates repetitive code found in almost every REST project:
 
 - 📥 Request parsing
 - ✅ Validation
@@ -23,11 +36,9 @@ The goal is to eliminate repetitive code found in almost every REST project:
 - ❌ Error handling
 - 🔄 DTO mapping
 - 🔀 Nullable conversions
-- 📄 Pagination (planned)
-- 🔍 Filtering (planned)
-- 🛡️ Middleware helpers (planned)
-
-without replacing existing frameworks.
+- 📄 Pagination
+- 🔍 Filtering
+- 🛡️ Middleware helpers (framework-agnostic)
 
 ## 📦 Installation
 
@@ -35,62 +46,117 @@ without replacing existing frameworks.
 go get github.com/otmc-sw/rest
 ```
 
+The module has **zero external dependencies**.
+
 ## ⚡ Quick Start
 
-### 🧶 Using with Fiber
+### Define a Context adapter (once, per framework)
 
 ```go
-package main
+import restcontext "github.com/otmc-sw/rest/context"
 
-import (
-    "github.com/gofiber/fiber/v2"
-    "github.com/otmc-sw/rest/adapters/fiber"
-    "github.com/otmc-sw/rest/request"
-)
+// Suppose you use Fiber. Implement the Context interface for *fiber.Ctx:
+type FiberContext struct{ *fiber.Ctx }
 
+func (c FiberContext) Context() context.Context { return c.Ctx.Context() }
+func (c FiberContext) Param(k string) string     { return c.Ctx.Params(k) }
+func (c FiberContext) Query(k string) string     { return c.Ctx.Query(k) }
+func (c FiberContext) QueryAll(k string) []string { return []string{c.Ctx.Query(k)} }
+func (c FiberContext) Header(k string) string    { return c.Ctx.Get(k) }
+func (c FiberContext) Cookie(k string) string    { return c.Ctx.Cookies(k) }
+func (c FiberContext) Body() io.Reader           { return bytes.NewReader(c.Ctx.Body()) }
+func (c FiberContext) Bind(v interface{}) error  { return c.Ctx.BodyParser(v) }
+func (c FiberContext) JSON(code int, body interface{}) error {
+    return c.Ctx.Status(code).JSON(body)
+}
+func (c FiberContext) Status(code int)            { c.Ctx.Status(code) }
+func (c FiberContext) SetHeader(k, v string)      { c.Ctx.Set(k, v) }
+func (c FiberContext) Method() string             { return c.Ctx.Method() }
+func (c FiberContext) Path() string               { return c.Ctx.Path() }
+func (c FiberContext) String() (string, error)    { return string(c.Ctx.Body()), nil }
+func (c FiberContext) Bytes() ([]byte, error)     { return c.Ctx.Body(), nil }
+```
+
+### Use the framework-agnostic API
+
+```go
 type CreateUserRequest struct {
     Name  string `json:"name"`
     Email string `json:"email"`
 }
 
 func CreateUser(c *fiber.Ctx) error {
-    // Parse request
+    ctx := FiberContext{Ctx: c} // implements restcontext.Context
+
+    // Parse & bind request
     var req CreateUserRequest
-    if err := request.Bind(fiber.Wrap(c), &req); err != nil {
-        return fiber.BadRequest(c, "Invalid request body", err)
+    if err := request.Bind(ctx, &req); err != nil {
+        return errors.
+            BadRequest().
+            Summary("Invalid request body").
+            Detail(err).
+            Send(ctx)
+    }
+
+    // Validate
+    if err := validator.New().
+        Required(req.Name).
+        Max(req.Name, 100).
+        Email(req.Email).
+        Validate(); err != nil {
+        return errors.
+            BadRequest().
+            Summary("Validation failed").
+            Detail(err).
+            Send(ctx)
     }
 
     // Business logic here...
 
-    // Send response
-    return fiber.OK(c, user)
+    // Send response with fluent API
+    return response.
+        Created[User](ctx).
+        Data(user).
+        Send()
 }
 ```
 
 ## 📦 Packages
 
+### 📥 Request
+
+Request parsing helpers depend only on the `Context` interface.
+
+```go
+import "github.com/otmc-sw/rest/request"
+
+request.Param(ctx, "id")
+request.ParamInt64(ctx, "id")
+request.Query(ctx, "page")
+request.QueryInt64OrDefault(ctx, "page", 1)
+request.QueryBool(ctx, "active")
+request.Header(ctx, "Authorization")
+request.GetBearerToken(ctx)
+request.Bind(ctx, &req)
+request.JSON(ctx, &req)
+```
+
 ### 📤 Response
 
-Standard REST response builder with fluent API.
+Standard REST response builder with fluent API and generic type safety.
 
 ```go
 import "github.com/otmc-sw/rest/response"
 
-// Success responses
-response.OK().Data(user)
-response.Created().Data(document)
-response.Accepted().Data(task)
-response.NoContent()
-
-// Error responses
-response.Error().BadRequest().Summary("Validation failed").Detail(err)
-response.Error().NotFound().Summary("User not found")
-response.Error().InternalError().Summary("Database error").Detail(err)
+response.OK[User](ctx).Data(user).Send()
+response.Created[Document](ctx).Data(document).Send()
+response.Accepted[Task](ctx).Data(task).Send()
+response.NoContent[any](ctx).Send()
 ```
 
 ### ❌ Errors
 
-Standard REST error types with detailed information.
+Standard REST error types with detailed information, sent through the context.
 
 ```go
 import "github.com/otmc-sw/rest/errors"
@@ -99,25 +165,42 @@ errors.New().
     BadRequest().
     Summary("Validation failed").
     Detail("Email is required").
-    Request(req).
-    Build()
+    Send(ctx)
 ```
 
-Error structure includes:
-- 🔢 `code`: HTTP status code
-- 🔑 `key`: Error key (e.g., BAD_REQUEST, NOT_FOUND)
-- 📝 `type`: Error type (e.g., Bad Request, Not Found)
-- 📋 `summary`: User-friendly summary
-- 📄 `detail`: Detailed error message
-- 🎯 `reason`: Failure reason
-- 📥 `request`: Request body (if available)
-- 📊 `data`: Additional error data
-- 📁 `file`, `line`, `function`: Source location
-- ⏰ `timestamp`: ISO timestamp
+### 🔀 Mapper
+
+Convert Entity ↔ DTO with generics (no reflection needed for registered types).
+
+```go
+import "github.com/otmc-sw/rest/mapper"
+
+mapper.Register(func(u User) UserResponse {
+    return UserResponse{ID: u.ID, Name: u.Name}
+})
+
+res := mapper.Map[UserResponse](user)
+list := mapper.MapSlice[UserResponse](users)
+```
+
+### ✅ Validator
+
+Fluent validation helpers — independent from HTTP.
+
+```go
+import "github.com/otmc-sw/rest/validator"
+
+validator.New().
+    Required(req.Name).
+    Min(req.Name, 3).
+    Max(req.Name, 100).
+    Email(req.Email).
+    Validate()
+```
 
 ### 🔀 Nullable
 
-Convert pointers to sql.NullXXX types.
+Convert values to lightweight nullable types. No SQL driver dependency.
 
 ```go
 import "github.com/otmc-sw/rest/nullable"
@@ -127,8 +210,8 @@ nullable.StringPtr(req.Description)
 nullable.Int64(req.ParentID)
 nullable.Float64(req.Price)
 nullable.Bool(req.IsActive)
+nullable.Time(req.CreatedAt)
 
-// With default value
 nullable.NewStringBuilder(req.Status).Default("draft")
 ```
 
@@ -161,127 +244,86 @@ jsonx.Valid(raw)
 jsonx.ParseJSONOrNull(s)
 ```
 
-### ✅ Validator
-
-Fluent validation helpers.
+### 📄 Pagination
 
 ```go
-import "github.com/otmc-sw/rest/validator"
+import "github.com/otmc-sw/rest/pagination"
 
-validator.New().
-    Required(req.Name).
-    Min(req.Name, 3).
-    Max(req.Name, 100).
-    Email(req.Email).
-    Validate()
-
-// Password validation
-validator.New().
-    Required(req.Password).
-    Min(req.Password, 8).
-    HasUpperCase(req.Password).
-    HasLowerCase(req.Password).
-    HasDigit(req.Password).
-    HasSpecialChar(req.Password).
-    Validate()
+page := pagination.New(ctx).DefaultSize(20).Page()
+offset := page.Offset()
+limit := page.Limit()
+meta := pagination.NewMeta(page, totalCount)
 ```
 
-### 📥 Request
-
-Request parsing helpers.
+### 🔍 Filter
 
 ```go
-import "github.com/otmc-sw/rest/request"
+import "github.com/otmc-sw/rest/filter"
 
-// Path parameters
-request.Param(ctx, "id")
-request.ParamInt64(ctx, "id")
+f := filter.New(ctx).Build()
+// f.Keyword, f.Sort, f.Order, f.Page, f.Size
+```
 
-// Query parameters
-request.Query(ctx, "page")
-request.QueryInt64(ctx, "page")
-request.QueryInt64OrDefault(ctx, "page", 1)
-request.QueryBool(ctx, "active")
+### 🛡️ Middleware
 
-// Headers
-request.Header(ctx, "Authorization")
-request.GetBearerToken(ctx)
-request.GetContentType(ctx)
-request.GetUserAgent(ctx)
+Framework-agnostic middleware helpers operating on `context.Context`.
 
-// Body
-request.Bind(ctx, &req)
-request.String(ctx)
-request.Bytes(ctx)
-request.JSON(ctx, &req)
+```go
+import "github.com/otmc-sw/rest/middleware"
+
+mw := middleware.RequestID("X-Request-ID")
+mw := middleware.Logger()
+mw := middleware.Recover()
+mw := middleware.Timeout(30 * time.Second)
+```
+
+### 🚦 Pipeline
+
+The REST pipeline orchestrates the full request lifecycle using only the
+`Context` interface.
+
+```go
+import "github.com/otmc-sw/rest/pipeline"
+
+func UpdateDocument(ctx restcontext.Context) error {
+    return pipeline.
+        Update[UpdateRequest, DocumentResponse](ctx).
+        Param("id").
+        Bind().
+        Validate(func(r UpdateRequest) error {
+            return validator.New().Required(r.Title).Validate()
+        }).
+        HandleWithID(service.Update).
+        Respond()
+}
 ```
 
 ### 🎯 Context
 
-Framework-agnostic context interface.
+The minimal framework-agnostic context interface that every package depends on.
 
 ```go
 import "github.com/otmc-sw/rest/context"
 
-// The context interface is implemented by adapters
-// to provide a unified API across frameworks
 type Context interface {
-    GetContext() context.Context
+    Context() context.Context
+
     Param(key string) string
     Query(key string) string
     QueryAll(key string) []string
     Header(key string) string
     Cookie(key string) string
-    Body() io.Reader
+
     Bind(v interface{}) error
+    JSON(status int, body interface{}) error
+    Status(code int)
+    SetHeader(key, value string)
+
     Method() string
     Path() string
     String() (string, error)
     Bytes() ([]byte, error)
 }
-```
-
-### 🔌 Adapters
-
-Framework-specific adapters implement the context interface.
-
-#### 🧶 Fiber Adapter
-
-```go
-import (
-    "github.com/gofiber/fiber/v2"
-    "github.com/otmc-sw/rest/adapters/fiber"
-    "github.com/otmc-sw/rest/request"
-)
-
-func Handler(c *fiber.Ctx) error {
-    // Wrap Fiber context
-    ctx := fiber.Wrap(c)
-
-    // Use framework-agnostic request helpers
-    id, err := request.ParamInt64(ctx, "id")
-    if err != nil {
-        return fiber.BadRequest(c, "Invalid ID", err)
-    }
-
-    // Send response using adapter helpers
-    return fiber.OK(c, data)
-}
-```
-
-Fiber adapter also provides convenience response helpers:
-
-```go
-fiber.OK(c, data)
-fiber.Created(c, data)
-fiber.Accepted(c, data)
-fiber.NoContent(c)
-fiber.BadRequest(c, "summary", detail)
-fiber.Unauthorized(c, "message")
-fiber.Forbidden(c, "message")
-fiber.NotFound(c, "message")
-fiber.Conflict(c, "message")
-fiber.InternalError(c, "message", err)
 ```
 
 ## 🎨 Design Principles
@@ -291,30 +333,34 @@ fiber.InternalError(c, "message", err)
 Easy to learn and use.
 
 ```go
-return fiber.OK(c).Data(user)
+return response.Created[Document](ctx).Data(document).Send()
 ```
 
 ### 🔗 Fluent API
 
-Everything supports method chaining.
+Everything supports method chaining with generic type safety.
 
 ```go
 return response.
-    Created(c).
+    Created[DocumentResponse](ctx).
     Data(document).
-    Map[DocumentResponse]()
+    Send()
 ```
 
 ### 🌐 Framework Agnostic
 
-Core library doesn't depend on Fiber, Gin, or Echo. Adapters are separated.
+The core library does **not** depend on Fiber, Gin, Echo, Chi or net/http. There is
+no `adapters/` package inside this module — adapters live in your application or in a
+separate module you control.
 
 ```
-rest-core
-    ↓
-Context interface
-    ↓
-Fiber Adapter
+Fiber / Gin / Echo / net/http
+            ↓
+   Context Adapter (your code)
+            ↓
+   rest.Context (interface)
+            ↓
+   request → validator → service → mapper → response
 ```
 
 ### 🔷 Generic First
@@ -322,56 +368,19 @@ Fiber Adapter
 Use Go Generics whenever possible.
 
 ```go
-request.Bind[CreateUserRequest](ctx)
+request.Bind(ctx, &req)
 mapper.Map[UserResponse](user)
+response.OK[User](ctx).Data(user).Send()
 ```
 
-### 🚫 Zero Reflection
+### 🚫 No Reflection Required
 
-Reflection only used where absolutely necessary. Mapping supports:
-- 🔷 Generic
-- ✍️ Manual Mapper
-- 🪞 Reflection Mapper (optional, planned)
+Reflection is only used as a fallback in `mapper.Auto` when no explicit mapping is
+registered. Prefer `mapper.Register` with generics.
 
 ### 🎯 Minimal
 
 Only solve common REST problems. Don't become another web framework.
-
-### 📝 Example Handler
-
-```go
-func (h *Handler) CreateDocument(c *fiber.Ctx) error {
-    // Parse path parameter
-    id, err := request.ParamInt64(fiber.Wrap(c), "id")
-    if err != nil {
-        return fiber.BadRequest(c, "Invalid ID", err)
-    }
-
-    // Parse request body
-    var req CreateDocumentRequest
-    if err := request.Bind(fiber.Wrap(c), &req); err != nil {
-        return fiber.BadRequest(c, "Invalid request body", err)
-    }
-
-    // Validate
-    if err := validator.New().
-        Required(req.Title).
-        Min(req.Title, 3).
-        Max(req.Title, 100).
-        Validate(); err != nil {
-        return fiber.BadRequest(c, "Validation failed", err)
-    }
-
-    // Business logic
-    doc, err := h.documentService.Create(c.Context(), id, req)
-    if err != nil {
-        return fiber.InternalError(c, "Failed to create document", err)
-    }
-
-    // Send response
-    return fiber.Created(c, doc)
-}
-```
 
 ## 📜 License
 

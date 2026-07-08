@@ -7,9 +7,10 @@
 package jsonx
 
 import (
-	"database/sql"
 	"encoding/json"
 	"strings"
+
+	"github.com/otmc-sw/rest/nullable"
 )
 
 func Marshal(data interface{}) ([]byte, error) {
@@ -39,30 +40,30 @@ func UnmarshalString(s string, v interface{}) error {
 	return json.Unmarshal([]byte(s), v)
 }
 
-func SQL(raw []byte) sql.NullString {
+func SQL(raw []byte) nullable.NullString {
 	if len(raw) == 0 {
-		return sql.NullString{Valid: false}
+		return nullable.NullString{Valid: false}
 	}
 	if json.Valid(raw) {
-		return sql.NullString{
+		return nullable.NullString{
 			String: string(raw),
 			Valid:  true,
 		}
 	}
-	return sql.NullString{Valid: false}
+	return nullable.NullString{Valid: false}
 }
 
-func SQLString(s string) sql.NullString {
+func SQLString(s string) nullable.NullString {
 	if s == "" {
-		return sql.NullString{Valid: false}
+		return nullable.NullString{Valid: false}
 	}
 	if json.Valid([]byte(s)) {
-		return sql.NullString{
+		return nullable.NullString{
 			String: s,
 			Valid:  true,
 		}
 	}
-	return sql.NullString{Valid: false}
+	return nullable.NullString{Valid: false}
 }
 
 func Valid(data []byte) bool {

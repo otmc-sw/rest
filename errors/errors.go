@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"time"
+
+	"github.com/otmc-sw/rest/context"
 )
 
 type ErrorDetails struct {
@@ -31,6 +33,10 @@ type ErrorDetails struct {
 type Error struct {
 	Success bool         `json:"success"`
 	Error   ErrorDetails `json:"error"`
+}
+
+func (e Error) Err() error {
+	return fmt.Errorf("[%d] %s: %s", e.Error.Code, e.Error.Key, e.Error.Summary)
 }
 
 type Builder struct {
@@ -157,6 +163,14 @@ func (b *Builder) Build() Error {
 		Success: false,
 		Error:   b.details,
 	}
+}
+
+func (b *Builder) Send(ctx context.Context) error {
+	err := b.Build()
+	if ctx == nil {
+		return err.Err()
+	}
+	return ctx.JSON(err.Error.Code, err)
 }
 
 func getCallerInfo(skip int) (file string, line int, funcName string) {

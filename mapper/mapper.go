@@ -1,0 +1,58 @@
+﻿/**
+ * @License OTMC License
+ * @Copyright (c) 2026 OTMC Softwares. All rights reserved.
+ * @Contributors Trung Ng, OTMC Authors.
+**/
+
+package mapper
+
+import (
+	"fmt"
+	"sync"
+)
+
+type MapperFunc[S any, D any] func(S) D
+
+var (
+	registry   = map[string]interface{}{}
+	registryMu sync.RWMutex
+)
+
+func Register[S any, D any](fn MapperFunc[S, D]) {
+	registryMu.Lock()
+	defer registryMu.Unlock()
+	key := typeKey[S]() + "->" + typeKey[D]()
+	registry[key] = fn
+}
+
+func Map[D any, S any](src S) D {
+	registryMu.RLock()
+	key := typeKey[S]() + "->" + typeKey[D]()
+	if fn, ok := registry[key]; ok {
+		registryMu.RUnlock()
+		if m, ok := fn.(func(S) D); ok {
+			return m(src)
+		}
+	}
+	registryMu.RUnlock()
+	return Auto[D](src)
+}
+
+func MapSlice[D any, S any](src []S) []D {
+	dst := make([]D, 0, len(src))
+	for _, s := range src {
+		dst = append(dst, Map[D](s))
+	}
+	return dst
+}
+
+func Auto[D any, S any](src S) D {
+	var dst D
+	copyStructFields(&src, &dst)
+	return dst
+}
+
+func typeKey[T any]() string {
+	var t T
+	return fmt.Sprintf("%T", t)
+}
