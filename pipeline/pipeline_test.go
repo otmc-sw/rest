@@ -2,7 +2,7 @@
  * @License Apache License 2.0
  * @Copyright (c) 2026 OTMC Softwares. OTMC Golang REST.
  * @Contributors Nguyen Van Trung, Nguyen Thi Hoai, OTMC Contributors.
-**/
+ **/
 package pipeline
 
 import (
@@ -51,6 +51,11 @@ type CreateDocRequest struct {
 	Title string `json:"title"`
 }
 
+type DocEntity struct {
+	ID    string
+	Title string
+}
+
 type DocResponse struct {
 	ID    string `json:"id"`
 	Title string `json:"title"`
@@ -65,11 +70,11 @@ func TestPipelineEndToEnd(t *testing.T) {
 		header: http.Header{},
 	}
 
-	handle := func(ctx restcontext.Context, req CreateDocRequest) (DocResponse, error) {
-		return DocResponse{ID: "42", Title: req.Title}, nil
+	handle := func(ctx restcontext.Context, req CreateDocRequest) (DocEntity, error) {
+		return DocEntity{ID: "42", Title: req.Title}, nil
 	}
 
-	err := Create[CreateDocRequest, DocResponse](fc).
+	err := Create[CreateDocRequest, DocEntity, DocResponse](fc).
 		Param("id").
 		Bind().
 		Validate(func(r CreateDocRequest) error {
@@ -84,7 +89,13 @@ func TestPipelineEndToEnd(t *testing.T) {
 		t.Fatalf("pipeline failed: %v", err)
 	}
 
-	if fc.status != 200 {
-		t.Fatalf("expected status 200, got %d", fc.status)
+	if fc.status != 201 {
+		t.Fatalf("expected status 201, got %d", fc.status)
+	}
+
+	resp := fc.wrote
+	data, _ := json.Marshal(resp)
+	if string(data) == "" {
+		t.Fatalf("expected a written body, got empty")
 	}
 }

@@ -52,6 +52,13 @@ func NoContent[T any](ctx context.Context) *Builder[T] {
 	}
 }
 
+func New[T any](ctx context.Context, statusCode int) *Builder[T] {
+	return &Builder[T]{
+		ctx:        ctx,
+		statusCode: statusCode,
+	}
+}
+
 func Error() *errors.Builder {
 	return errors.New()
 }
