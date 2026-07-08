@@ -1,43 +1,43 @@
-# OTMC REST
+# 🚀 OTMC REST
 
 A modern, lightweight, extensible REST toolkit for Go.
 
-## Vision
+## 👁️ Vision
 
 OTMC REST is **not a web framework**. It is a reusable toolkit that helps developers build clean, consistent, and maintainable REST APIs while remaining framework agnostic.
 
-### Supported Frameworks
+### 🌐 Supported Frameworks
 
-- Fiber
-- Gin (planned)
-- Echo (planned)
-- Chi (planned)
-- net/http (planned)
-- Custom adapters
+- 🧶 Fiber
+- 🍃 Gin (planned)
+- 🔔 Echo (planned)
+- 🥢 Chi (planned)
+- 🌐 net/http (planned)
+- 🔧 Custom adapters
 
 The goal is to eliminate repetitive code found in almost every REST project:
 
-- Request parsing
-- Validation
-- Response formatting
-- Error handling
-- DTO mapping
-- Nullable conversions
-- Pagination (planned)
-- Filtering (planned)
-- Middleware helpers (planned)
+- 📥 Request parsing
+- ✅ Validation
+- 📤 Response formatting
+- ❌ Error handling
+- 🔄 DTO mapping
+- 🔀 Nullable conversions
+- 📄 Pagination (planned)
+- 🔍 Filtering (planned)
+- 🛡️ Middleware helpers (planned)
 
 without replacing existing frameworks.
 
-## Installation
+## 📦 Installation
 
 ```bash
 go get github.com/otmc-sw/rest
 ```
 
-## Quick Start
+## ⚡ Quick Start
 
-### Using with Fiber
+### 🧶 Using with Fiber
 
 ```go
 package main
@@ -67,9 +67,9 @@ func CreateUser(c *fiber.Ctx) error {
 }
 ```
 
-## Packages
+## 📦 Packages
 
-### Response
+### 📤 Response
 
 Standard REST response builder with fluent API.
 
@@ -88,7 +88,7 @@ response.Error().NotFound().Summary("User not found")
 response.Error().InternalError().Summary("Database error").Detail(err)
 ```
 
-### Errors
+### ❌ Errors
 
 Standard REST error types with detailed information.
 
@@ -104,18 +104,18 @@ errors.New().
 ```
 
 Error structure includes:
-- `code`: HTTP status code
-- `key`: Error key (e.g., BAD_REQUEST, NOT_FOUND)
-- `type`: Error type (e.g., Bad Request, Not Found)
-- `summary`: User-friendly summary
-- `detail`: Detailed error message
-- `reason`: Failure reason
-- `request`: Request body (if available)
-- `data`: Additional error data
-- `file`, `line`, `function`: Source location
-- `timestamp`: ISO timestamp
+- 🔢 `code`: HTTP status code
+- 🔑 `key`: Error key (e.g., BAD_REQUEST, NOT_FOUND)
+- 📝 `type`: Error type (e.g., Bad Request, Not Found)
+- 📋 `summary`: User-friendly summary
+- 📄 `detail`: Detailed error message
+- 🎯 `reason`: Failure reason
+- 📥 `request`: Request body (if available)
+- 📊 `data`: Additional error data
+- 📁 `file`, `line`, `function`: Source location
+- ⏰ `timestamp`: ISO timestamp
 
-### Nullable
+### 🔀 Nullable
 
 Convert pointers to sql.NullXXX types.
 
@@ -132,7 +132,7 @@ nullable.Bool(req.IsActive)
 nullable.NewStringBuilder(req.Status).Default("draft")
 ```
 
-### Convert
+### 🔄 Convert
 
 Type conversion helpers.
 
@@ -147,7 +147,7 @@ convert.Int64FromNull(nullInt64)
 convert.Float64FromNull(nullFloat64)
 ```
 
-### JSONx
+### 📋 JSONx
 
 JSON helper utilities.
 
@@ -161,7 +161,7 @@ jsonx.Valid(raw)
 jsonx.ParseJSONOrNull(s)
 ```
 
-### Validator
+### ✅ Validator
 
 Fluent validation helpers.
 
@@ -186,7 +186,7 @@ validator.New().
     Validate()
 ```
 
-### Request
+### 📥 Request
 
 Request parsing helpers.
 
@@ -216,7 +216,7 @@ request.Bytes(ctx)
 request.JSON(ctx, &req)
 ```
 
-### Context
+### 🎯 Context
 
 Framework-agnostic context interface.
 
@@ -241,11 +241,11 @@ type Context interface {
 }
 ```
 
-### Adapters
+### 🔌 Adapters
 
 Framework-specific adapters implement the context interface.
 
-#### Fiber Adapter
+#### 🧶 Fiber Adapter
 
 ```go
 import (
@@ -284,9 +284,9 @@ fiber.Conflict(c, "message")
 fiber.InternalError(c, "message", err)
 ```
 
-## Design Principles
+## 🎨 Design Principles
 
-### Simple
+### 💡 Simple
 
 Easy to learn and use.
 
@@ -294,7 +294,7 @@ Easy to learn and use.
 return fiber.OK(c).Data(user)
 ```
 
-### Fluent API
+### 🔗 Fluent API
 
 Everything supports method chaining.
 
@@ -305,7 +305,7 @@ return response.
     Map[DocumentResponse]()
 ```
 
-### Framework Agnostic
+### 🌐 Framework Agnostic
 
 Core library doesn't depend on Fiber, Gin, or Echo. Adapters are separated.
 
@@ -317,7 +317,7 @@ Context interface
 Fiber Adapter
 ```
 
-### Generic First
+### 🔷 Generic First
 
 Use Go Generics whenever possible.
 
@@ -326,18 +326,18 @@ request.Bind[CreateUserRequest](ctx)
 mapper.Map[UserResponse](user)
 ```
 
-### Zero Reflection
+### 🚫 Zero Reflection
 
 Reflection only used where absolutely necessary. Mapping supports:
-- Generic
-- Manual Mapper
-- Reflection Mapper (optional, planned)
+- 🔷 Generic
+- ✍️ Manual Mapper
+- 🪞 Reflection Mapper (optional, planned)
 
-### Minimal
+### 🎯 Minimal
 
 Only solve common REST problems. Don't become another web framework.
 
-## Example Handler
+### 📝 Example Handler
 
 ```go
 func (h *Handler) CreateDocument(c *fiber.Ctx) error {
@@ -373,10 +373,10 @@ func (h *Handler) CreateDocument(c *fiber.Ctx) error {
 }
 ```
 
-## License
+## 📜 License
 
 OTMC License
 
-## Contributing
+### 🤝 Contributing
 
 Contributions are welcome! Please see the NOTICE file for details.
