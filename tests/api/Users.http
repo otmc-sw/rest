@@ -1,0 +1,27 @@
+@baseUrl = http://localhost:3000
+
+### Create a user (valid)
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "name": "Nguyen Van Trung",
+  "email": "trung@otmc.dev"
+}
+
+### Create a user (missing name -> validation error)
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "email": "trung@otmc.dev"
+}
+
+### Create a user (invalid email -> validation error)
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "name": "Nguyen Van Trung",
+  "email": "not-an-email"
+}

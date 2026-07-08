@@ -26,14 +26,13 @@ func Register[S any, D any](fn MapperFunc[S, D]) {
 
 func Map[D any, S any](src S) D {
 	registryMu.RLock()
+	defer registryMu.RUnlock()
 	key := typeKey[S]() + "->" + typeKey[D]()
 	if fn, ok := registry[key]; ok {
-		registryMu.RUnlock()
 		if m, ok := fn.(func(S) D); ok {
 			return m(src)
 		}
 	}
-	registryMu.RUnlock()
 	return Auto[D](src)
 }
 
