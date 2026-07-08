@@ -1,9 +1,3 @@
-/**
- * @License OTMC License
- * @Copyright (c) 2026 OTMC Softwares. All rights reserved.
- * @Contributors Trung Ng, OTMC Authors.
-**/
-
 # 🚀 OTMC REST
 
 A modern, lightweight, extensible REST toolkit for Go — **100% framework independent**.
