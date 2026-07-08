@@ -4,6 +4,7 @@ go 1.26
 
 require (
 	github.com/gofiber/fiber/v2 v2.52.5
+	github.com/otmc-sw/logger v0.1.7
 	github.com/otmc-sw/rest v0.0.0
 )
 
