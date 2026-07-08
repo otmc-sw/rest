@@ -375,8 +375,11 @@ func (h *Handler) CreateDocument(c *fiber.Ctx) error {
 
 ## 📜 License
 
-OTMC License
+* Apache License 2.0
+* Copyright (c) 2026 OTMC Softwares.
 
-### 🤝 Contributing
+## ✨ Contributors
 
-Contributions are welcome! Please see the NOTICE file for details.
+* 🌿 Nguyen Van Trung
+* 🌿 Nguyen Thi Hoai
+* 🌿 OTMC Contributors
