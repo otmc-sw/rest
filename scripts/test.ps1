@@ -24,7 +24,7 @@ switch ($option) {
         Set-Location $TOP/examples/fiber
         sqlc generate
         go mod tidy
-        go build -o fiber-example.exe
+        go build -o fiber.exe
         if ($LASTEXITCODE -ne 0) {
             Write-Host "Go build failed" -ForegroundColor Red
             exit 1
