@@ -17,22 +17,22 @@ import (
 type Component string
 
 const (
-	ComponentMapper   Component = "mapper"
-	ComponentPipeline Component = "pipeline"
+	ComponentMapper    Component = "mapper"
+	ComponentPipeline  Component = "pipeline"
 	ComponentValidator Component = "validator"
-	ComponentErrors   Component = "errors"
-	ComponentRequest  Component = "request"
-	ComponentResponse Component = "response"
-	ComponentFilter   Component = "filter"
-	ComponentConvert  Component = "convert"
-	ComponentAll      Component = "all"
+	ComponentErrors    Component = "errors"
+	ComponentRequest   Component = "request"
+	ComponentResponse  Component = "response"
+	ComponentFilter    Component = "filter"
+	ComponentConvert   Component = "convert"
+	ComponentAll       Component = "all"
 )
 
 var (
-	mu            sync.RWMutex
-	enabled       bool
+	mu             sync.RWMutex
+	enabled        bool
 	componentFlags = map[Component]bool{}
-	logger        = log.New(os.Stdout, "[REST] ", log.Lmicroseconds)
+	logger         = log.New(os.Stdout, "[REST] ", log.Lmicroseconds)
 )
 
 func Enable() {
@@ -106,21 +106,11 @@ func WithEnv() {
 	WithEnvFromString(value)
 }
 
-
 func logDebug(component Component, format string, args ...interface{}) {
 	if !IsComponentEnabled(component) && component != ComponentAll {
 		return
 	}
 	prefix := fmt.Sprintf("[%-8s] ", component)
-	msg := fmt.Sprintf(format, args...)
-	logger.Output(3, prefix+msg)
-}
-
-func logDebugWithTime(component Component, format string, args ...interface{}) {
-	if !IsComponentEnabled(component) && component != ComponentAll {
-		return
-	}
-	prefix := fmt.Sprintf("[%-8s] [%s] ", component, time.Now().Format("15:04:05.000"))
 	msg := fmt.Sprintf(format, args...)
 	logger.Output(3, prefix+msg)
 }
