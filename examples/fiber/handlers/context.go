@@ -11,10 +11,17 @@ import (
 	"io"
 
 	"github.com/gofiber/fiber/v2"
+	sqlc "github.com/otmc-sw/rest/examples/fiber/db/sqlc"
 )
 
 type FiberContext struct {
 	*fiber.Ctx
+}
+
+var database *sqlc.Queries
+
+func SetDatabase(db *sqlc.Queries) {
+	database = db
 }
 
 func (c FiberContext) Context() context.Context { return c.Ctx.Context() }

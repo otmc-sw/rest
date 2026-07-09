@@ -31,11 +31,15 @@ type ErrorDetails struct {
 
 type Error struct {
 	Success bool         `json:"success"`
-	Error   ErrorDetails `json:"error"`
+	Details ErrorDetails `json:"error"`
+}
+
+func (e Error) Error() string {
+	return fmt.Sprintf("[%d] %s: %s", e.Details.Code, e.Details.Key, e.Details.Summary)
 }
 
 func (e Error) Err() error {
-	return fmt.Errorf("[%d] %s: %s", e.Error.Code, e.Error.Key, e.Error.Summary)
+	return fmt.Errorf("[%d] %s: %s", e.Details.Code, e.Details.Key, e.Details.Summary)
 }
 
 type Builder struct {
@@ -160,7 +164,7 @@ func (b *Builder) Build() Error {
 	b.details.Function = fn
 	return Error{
 		Success: false,
-		Error:   b.details,
+		Details: b.details,
 	}
 }
 
@@ -169,7 +173,7 @@ func (b *Builder) Send(ctx context.Context) error {
 	if ctx == nil {
 		return err.Err()
 	}
-	return ctx.JSON(err.Error.Code, err)
+	return ctx.JSON(err.Details.Code, err)
 }
 
 func getCallerInfo(skip int) (file string, line int, funcName string) {

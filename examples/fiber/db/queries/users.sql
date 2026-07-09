@@ -4,6 +4,9 @@ INSERT INTO users (username, email) VALUES (?, ?);
 -- name: GetUser :one
 SELECT id, username, email, created_at, updated_at FROM users WHERE id = ?;
 
+-- name: GetAllUsers :many
+SELECT id, username, email, created_at, updated_at FROM users;
+
 -- name: UpdateUser :exec
 UPDATE users SET username = ?, email = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;
 

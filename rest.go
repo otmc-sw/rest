@@ -19,6 +19,8 @@ type Handler[Req any, Entity any] = pipeline.Handler[Req, Entity]
 
 type UpdateHandler[Req any, Entity any] = pipeline.UpdateHandler[Req, Entity]
 
+type ExecHandler[Req any] = pipeline.ExecHandler[Req]
+
 type Pipeline[Req any, Entity any, Res any] = pipeline.Pipeline[Req, Entity, Res]
 
 

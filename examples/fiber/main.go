@@ -11,10 +11,19 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/otmc-sw/logger"
+	"github.com/otmc-sw/rest/examples/fiber/db"
 	"github.com/otmc-sw/rest/examples/fiber/handlers"
 )
 
 func main() {
+
+	db, err := db.New()
+	if err != nil {
+		logger.Crit("Failed to connect to database: %v", err)
+	}
+
+	handlers.SetDatabase(db.Queries)
+
 	app := fiber.New()
 
 	app.Use(func(c *fiber.Ctx) error {
@@ -25,9 +34,11 @@ func main() {
 	})
 
 	app.Post("/users", handlers.CreateUser)
+	app.Get("/users", handlers.GetAllUsers)
 	app.Get("/users/:id", handlers.GetUser)
 	app.Patch("/users/:id", handlers.UpdateUser)
 	app.Delete("/users/:id", handlers.DeleteUser)
 
+	logger.Info("Server started on :3000")
 	log.Fatal(app.Listen(":3000"))
 }

@@ -1,15 +1,21 @@
 @baseUrl = http://localhost:3000
 
+### Get all users
+GET {{baseUrl}}/users
+
+### Get a user by ID
+GET {{baseUrl}}/users/1
+
 ### Create a user (valid)
 POST {{baseUrl}}/users
 Content-Type: application/json
 
 {
-  "name": "Nguyen Van Trung",
+  "username": "trung",
   "email": "trung@otmc.dev"
 }
 
-### Create a user (missing name -> validation error)
+### Create a user (missing username -> validation error)
 POST {{baseUrl}}/users
 Content-Type: application/json
 
@@ -22,6 +28,6 @@ POST {{baseUrl}}/users
 Content-Type: application/json
 
 {
-  "name": "Nguyen Van Trung",
+  "username": "trung",
   "email": "not-an-email"
 }
