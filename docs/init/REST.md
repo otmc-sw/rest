@@ -158,40 +158,17 @@ REST API
 
 ```
 rest/
-
     request/
-
     response/
-
     mapper/
-
     validator/
-
     nullable/
-
-    convert/
-
+    converter/
     errors/
-
     pagination/
-
     filter/
-
     jsonx/
-
     middleware/
-
-    adapters/
-
-        fiber/
-
-        gin/
-
-        echo/
-
-        http/
-
-internal/
 ```
 
 ---
@@ -323,13 +300,13 @@ Type conversion helpers.
 Example
 
 ```
-convert.Int64(str)
+converter.Int64(str)
 
-convert.String(nullString)
+converter.String(nullString)
 
-convert.Time(nullTime)
+converter.Time(nullTime)
 
-convert.Bool(nullBool)
+converter.Bool(nullBool)
 ```
 
 ---

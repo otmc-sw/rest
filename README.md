@@ -1,9 +1,3 @@
-/**
- * @License Apache License 2.0
- * @Copyright (c) 2026 OTMC Softwares. OTMC Golang REST.
- * @Contributors Nguyen Van Trung, Nguyen Thi Hoai, OTMC Contributors.
- **/
-
 # 🚀 OTMC REST
 
 A modern, lightweight, extensible REST toolkit for Go — **100% framework independent**.
@@ -258,17 +252,17 @@ nullable.Time(req.CreatedAt)
 nullable.NewStringBuilder(req.Status).Default("draft")
 ```
 
-### 🔄 Convert
+### 🔄 Converter
 
 Type conversion helpers.
 
 ```go
-convert.Int64(str)
-convert.String(nullString)
-convert.Time(nullTime)
-convert.Bool(nullBool)
-convert.Int64FromNull(nullInt64)
-convert.Float64FromNull(nullFloat64)
+converter.Int64(str)
+converter.String(nullString)
+converter.Time(nullTime)
+converter.Bool(nullBool)
+converter.Int64FromNull(nullInt64)
+converter.Float64FromNull(nullFloat64)
 ```
 
 ### 📋 JSONx

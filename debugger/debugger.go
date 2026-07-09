@@ -24,7 +24,7 @@ const (
 	ComponentRequest   Component = "request"
 	ComponentResponse  Component = "response"
 	ComponentFilter    Component = "filter"
-	ComponentConvert   Component = "convert"
+	ComponentConverter Component = "converter"
 	ComponentAll       Component = "all"
 )
 
@@ -151,6 +151,6 @@ func Filter(format string, args ...interface{}) {
 	logDebug(ComponentFilter, format, args...)
 }
 
-func Convert(format string, args ...interface{}) {
-	logDebug(ComponentConvert, format, args...)
+func Converter(format string, args ...interface{}) {
+	logDebug(ComponentConverter, format, args...)
 }
