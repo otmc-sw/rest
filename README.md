@@ -34,202 +34,355 @@ The core eliminates repetitive code found in almost every REST project:
 - 🔍 Filtering
 - 🛡️ Middleware helpers (framework-agnostic)
 
+A runnable Fiber example lives in [`examples/fiber`](examples/fiber).
+
 ## 📦 Installation
 
 ```bash
 go get github.com/otmc-sw/rest
 ```
 
-The module has **zero external dependencies**.
+The core module has **zero external dependencies** (sub-packages used by the example,
+such as a database driver, are only needed by the example itself).
 
 ## ⚡ Quick Start
 
-### One import only
+### Import the packages you need
 
-Applications import a **single package**. All internal building blocks
-(`request`, `response`, `validator`, `mapper`, `errors`, `nullable`, …) are
-implementation details and should **never** be imported by application code.
+Application code imports the top-level `rest` package for the pipeline, plus any
+supporting sub-packages it actually uses:
 
 ```go
-import "github.com/otmc-sw/rest"
+import (
+    rest "github.com/otmc-sw/rest"
+    "github.com/otmc-sw/rest/context"
+    "github.com/otmc-sw/rest/nullable"
+    "github.com/otmc-sw/rest/request"
+    "github.com/otmc-sw/rest/response"
+)
 ```
+
+> The sub-packages (`request`, `response`, `validator`, `mapper`, `errors`,
+> `nullable`, `converter`, `jsonx`, `pagination`, `filter`, `middleware`, `context`)
+> are **public and importable**. The top-level `rest` package re-exports the most
+> common helpers (`Validate`, `NewError`, `Register`, the pipeline constructors) for
+> convenience, but you may also use the sub-packages directly.
 
 ### Define a Context adapter (once, per framework)
 
-```go
-import "github.com/otmc-sw/rest"
+The core depends only on the `Context` interface. Here is the real adapter shipped
+with the Fiber example ([`examples/fiber/handlers/context.go`](examples/fiber/handlers/context.go)):
 
-// Suppose you use Fiber. Implement the Context interface for *fiber.Ctx:
+```go
+import (
+    "bytes"
+    "context"
+    "io"
+
+    "github.com/gofiber/fiber/v2"
+)
+
 type FiberContext struct{ *fiber.Ctx }
 
 func (c FiberContext) Context() context.Context { return c.Ctx.Context() }
-func (c FiberContext) Param(k string) string     { return c.Ctx.Params(k) }
-func (c FiberContext) Query(k string) string     { return c.Ctx.Query(k) }
-func (c FiberContext) QueryAll(k string) []string { return []string{c.Ctx.Query(k)} }
-func (c FiberContext) Header(k string) string    { return c.Ctx.Get(k) }
-func (c FiberContext) Cookie(k string) string    { return c.Ctx.Cookies(k) }
-func (c FiberContext) Body() io.Reader           { return bytes.NewReader(c.Ctx.Body()) }
-func (c FiberContext) Bind(v interface{}) error  { return c.Ctx.BodyParser(v) }
+func (c FiberContext) Param(key string) string  { return c.Ctx.Params(key) }
+func (c FiberContext) Query(key string) string  { return c.Ctx.Query(key) }
+func (c FiberContext) QueryAll(key string) []string {
+    v := c.Ctx.Query(key)
+    if v == "" {
+        return nil
+    }
+    return []string{v}
+}
+func (c FiberContext) Header(key string) string { return c.Ctx.Get(key) }
+func (c FiberContext) Cookie(key string) string { return c.Ctx.Cookies(key) }
+func (c FiberContext) Body() io.Reader          { return bytes.NewReader(c.Ctx.Body()) }
+func (c FiberContext) Bind(v interface{}) error { return c.Ctx.BodyParser(v) }
 func (c FiberContext) JSON(code int, body interface{}) error {
     return c.Ctx.Status(code).JSON(body)
 }
-func (c FiberContext) Status(code int)            { c.Ctx.Status(code) }
-func (c FiberContext) SetHeader(k, v string)      { c.Ctx.Set(k, v) }
-func (c FiberContext) Method() string             { return c.Ctx.Method() }
-func (c FiberContext) Path() string               { return c.Ctx.Path() }
-func (c FiberContext) String() (string, error)    { return string(c.Ctx.Body()), nil }
-func (c FiberContext) Bytes() ([]byte, error)     { return c.Ctx.Body(), nil }
+func (c FiberContext) Status(code int)             { c.Ctx.Status(code) }
+func (c FiberContext) SetHeader(key, value string) { c.Ctx.Set(key, value) }
+func (c FiberContext) Method() string              { return c.Ctx.Method() }
+func (c FiberContext) Path() string                { return c.Ctx.Path() }
+func (c FiberContext) String() (string, error)     { return string(c.Ctx.Body()), nil }
+func (c FiberContext) Bytes() ([]byte, error)      { return c.Ctx.Body(), nil }
 ```
 
 ### Handlers describe only the business flow
 
-The pipeline coordinates everything: **Request → Bind → Validate → Business → Map → Respond**.
-You only declare the flow.
+The pipeline coordinates everything: **Request → Bind → Validate → Exec → Map → Respond**.
+You only declare the flow and the business closure.
 
 ```go
-type CreateUserRequest struct {
-    Name  string `json:"name"`
-    Email string `json:"email"`
+type UserRequest struct {
+    Username string
+    Email    string
 }
 
-// Service owns the business logic and returns an *entity* (not a DTO).
-func (s *UserService) Create(ctx rest.Context, req CreateUserRequest) (User, error) {
-    // load, validate business rules, persist, return entity
+type UserResponse struct {
+    ID       int64  `json:"id"`
+    Username string `json:"username"`
+    Email    string `json:"email"`
 }
 
-func CreateUser(c FiberContext) error {
-    return rest.
-        Create[CreateUserRequest, User, UserResponse](c).
-        Bind().
-        Validate(func(r CreateUserRequest) error {
-            return rest.Validate().Required(r.Name).Email(r.Email).Validate()
-        }).
-        Handle(userService.Create).
-        Respond()
+func ValidateUser(r UserRequest) error {
+    return rest.Validate().
+        Required(r.Username).
+        Email(r.Email).
+        Validate()
+}
+
+func CreateUser(c *fiber.Ctx) error {
+	return rest.
+		Create[UserRequest, db.User, UserResponse](FiberContext{Ctx: c}).
+		Bind().
+		Validate(ValidateUser).
+		Exec(func(ctx rest.Context, req UserRequest, id any) (any, error) {
+			params := db.CreateUserParams{
+				Username: req.Email,
+				Email:    req.Email,
+			}
+			return nil, database.CreateUser(ctx.Context(), params)
+		}).
+		Respond()
 }
 ```
 
-`Respond()` automatically maps the returned `User` entity to `UserResponse`
-(via a registered mapper) and writes a `201 Created` JSON response.
+`Respond()` automatically maps the `db.User` entity to `UserResponse` (via a registered
+mapper, or reflection fallback) and writes a `201 Created` JSON response.
 
-### Update with a route id
+The `Exec` closure signature is `func(ctx rest.Context, req Req, id any) (any, error)`:
+
+- For `Create`/`Update` with `Bind()`, `req` is the parsed request and `id` is (for
+  `Update`) the route `id` parsed to `int64`.
+- For `Get`/`Delete`, `req` is an empty `struct{}` and `id` is the route `id`
+  automatically read from the `id` path parameter and parsed to `int64`.
+- Return a non-`nil` value to send it as the response body; return `nil` (with a `nil`
+  error) when there is no body (e.g. `Delete`).
+
+### Get / Update / Delete
 
 ```go
-func UpdateDocument(c FiberContext) error {
-    return rest.
-        Update[UpdateDocumentRequest, Document, DocumentResponse](c).
-        Param("id").
-        Bind().
-        HandleWithID(documentService.Update).
-        Respond()
+func GetUser(c *fiber.Ctx) error {
+	return rest.
+		Get[struct{}, db.User, UserResponse](FiberContext{Ctx: c}).
+		Exec(func(ctx rest.Context, req struct{}, id any) (any, error) {
+			return database.GetUser(ctx.Context(), id.(int64))
+		}).
+		Respond()
+}
+
+func GetAllUsers(c *fiber.Ctx) error {
+	return rest.
+		Get[struct{}, []db.User, []UserResponse](FiberContext{Ctx: c}).
+		Exec(func(ctx rest.Context, req struct{}, id any) (any, error) {
+			return database.GetAllUsers(ctx.Context())
+		}).
+		Respond()
+}
+
+func UpdateUser(c *fiber.Ctx) error {
+	return rest.
+		Update[UserRequest, db.User, UserResponse](FiberContext{Ctx: c}).
+		Bind().
+		Validate(ValidateUser).
+		Exec(func(ctx rest.Context, req UserRequest, id any) (any, error) {
+			params := db.UpdateUserParams{
+				Username: req.Email,
+				Email:    req.Email,
+				ID:       id.(int64),
+			}
+			return nil, database.UpdateUser(ctx.Context(), params)
+		}).
+		Respond()
+}
+
+func DeleteUser(c *fiber.Ctx) error {
+	return rest.
+		Delete[UserResponse](FiberContext{Ctx: c}).
+		Exec(func(ctx rest.Context, req struct{}, id any) (any, error) {
+			return nil, database.DeleteUser(ctx.Context(), id.(int64))
+		}).
+		Respond()
 }
 ```
 
-### Get / Delete
+### Register a mapper (optional, once at startup)
 
-```go
-func GetDocument(c FiberContext) error {
-    return rest.
-        Get[struct{}, Document, DocumentResponse](c).
-        Param("id").
-        HandleWithID(documentService.Get).
-        Respond()
-}
-
-func DeleteDocument(c FiberContext) error {
-    return rest.
-        Delete[DocumentResponse](c).
-        Param("id").
-        HandleWithID(documentService.Delete).
-        Respond()
-}
-```
-
-### Register a mapper (once, at startup)
+When the entity and response types differ, register a mapper so `Respond()` can convert
+them. If no mapper is registered, the toolkit falls back to field-name reflection.
 
 ```go
 func init() {
-    rest.Register(func(u User) UserResponse {
-        return UserResponse{ID: u.ID, Name: u.Name}
+    rest.Register(func(u db.User) UserResponse {
+        return UserResponse{ID: u.ID, Username: u.Username, Email: u.Email}
     })
 }
 ```
 
-## 📦 Packages (internal)
+### Wiring it up (Fiber)
 
-These packages are implementation details wired together by the top-level `rest`
-package. Application code does **not** import them directly.
+This is the real entry point from [`examples/fiber/main.go`](examples/fiber/main.go):
 
-### 🚦 Pipeline
+```go
+func main() {
+    db, err := db.New()
+    if err != nil {
+        logger.Crit("Failed to connect to database: %v", err)
+    }
+    handlers.SetDatabase(db.Queries)
 
-The REST pipeline orchestrates the full request lifecycle using only the
-`Context` interface. `Create`, `Get`, `Update`, `Delete` start a pipeline;
-`Bind`, `Validate`, `Handle`, `HandleWithID`, `Respond` drive it.
+    app := fiber.New()
+
+    app.Use(func(c *fiber.Ctx) error {
+        start := time.Now()
+        err := c.Next()
+        logger.Request(c.Method(), c.Path(), c.Response().StatusCode(), time.Since(start), c.IP())
+        return err
+    })
+
+    app.Post("/users", handlers.CreateUser)
+    app.Get("/users", handlers.GetAllUsers)
+    app.Get("/users/:id", handlers.GetUser)
+    app.Patch("/users/:id", handlers.UpdateUser)
+    app.Delete("/users/:id", handlers.DeleteUser)
+
+    logger.Info("Server started on :3000")
+    log.Fatal(app.Listen(":3000"))
+}
+```
+
+## 📦 Packages
+
+### 🚦 Pipeline (top-level `rest` package)
+
+The REST pipeline orchestrates the full request lifecycle using only the `Context`
+interface. `Create`, `Get`, `Update`, `Delete` start a pipeline; `Bind`, `Validate`,
+`Exec`, `Respond` drive it.
+
+```go
+// Generic constructors exposed by the rest package:
+rest.Create[Req, Entity, Res](ctx)   // status 201
+rest.Get[Req, Entity, Res](ctx)      // status 200
+rest.Update[Req, Entity, Res](ctx)   // status 200
+rest.Delete[Res](ctx)                // status 204
+
+// Fluent steps:
+pipeline.Bind()                      // parse the request body into Req
+pipeline.Validate(func(Req) error)  // run validation
+pipeline.Exec(func(ctx, Req, id any) (any, error)) // run business logic
+pipeline.Respond()                   // map Entity -> Res and write JSON
+```
 
 Status codes are chosen automatically: `Create → 201`, `Get`/`Update → 200`,
-`Delete → 204`. The entity returned by the service is mapped to the response
-DTO by the registered mapper inside `Respond()`.
+`Delete → 204`. The value returned by `Exec` is mapped to the response DTO by the
+registered mapper (or reflection fallback) inside `Respond()`.
 
-### 🔄 Mapper
+For `Get`, `Update`, and `Delete` the route `id` is read automatically from the `id`
+path parameter and parsed to `int64` before `Exec` is called.
+
+The following types and helpers are re-exported by the top-level `rest` package:
+
+```go
+type Context = context.Context
+type Handler[Req, Entity] = pipeline.Handler[Req, Entity]
+type ExecHandler[Req] = pipeline.ExecHandler[Req]
+type Pipeline[Req, Entity, Res] = pipeline.Pipeline[Req, Entity, Res]
+
+func Create[Req, Entity, Res](ctx Context) *Pipeline[Req, Entity, Res]
+func Get[Req, Entity, Res](ctx Context) *Pipeline[Req, Entity, Res]
+func Update[Req, Entity, Res](ctx Context) *Pipeline[Req, Entity, Res]
+func Delete[Res](ctx Context) *Pipeline[struct{}, struct{}, Res]
+
+func Register[Src, Dst](fn func(Src) Dst)
+func Validate() *validator.Validator
+func NewError() *errors.Builder
+
+func Debug()
+func DebugComponent(component string)
+func DebugWithEnv()
+```
+
+### 🔄 Mapper (`github.com/otmc-sw/rest/mapper`)
 
 Convert Entity ↔ DTO with generics (no reflection needed for registered types).
 
 ```go
-import "github.com/otmc-sw/rest"
+import "github.com/otmc-sw/rest/mapper"
 
-rest.Register(func(u User) UserResponse {
-    return UserResponse{ID: u.ID, Name: u.Name}
+mapper.Register(func(u db.User) UserResponse {
+    return UserResponse{ID: u.ID, Username: u.Username, Email: u.Email}
 })
 
-res := rest.Map[UserResponse](user)         // exported for advanced use
-list := rest.MapSlice[UserResponse](users)
+res := mapper.Map[UserResponse](user)      // exported for advanced use
+list := mapper.MapSlice[UserResponse](users)
 ```
 
-### 📥 Request
+If no mapping is registered for a pair of types, `mapper.Auto` copies fields with
+matching names via reflection. Prefer `mapper.Register` (or `rest.Register`) with
+generics for full control.
+
+### 📥 Request (`github.com/otmc-sw/rest/request`)
 
 Request parsing helpers depend only on the `Context` interface.
 
 ```go
-rest.Param(ctx, "id")
-rest.ParamInt64(ctx, "id")
-rest.Query(ctx, "page")
-rest.QueryInt64OrDefault(ctx, "page", 1)
-rest.QueryBool(ctx, "active")
-rest.Header(ctx, "Authorization")
-rest.GetBearerToken(ctx)
-rest.Bind(ctx, &req)
-rest.JSON(ctx, &req)
+request.Param(ctx, "id")
+request.ParamInt64(ctx, "id")
+request.Query(ctx, "page")
+request.QueryInt64OrDefault(ctx, "page", 1)
+request.QueryInt(ctx, "page")
+request.QueryBool(ctx, "active")
+request.Header(ctx, "Authorization")
+request.Cookie(ctx, "session")
+request.Bind(ctx, &req)
+request.JSON(ctx, &req)
+request.GetBearerToken(ctx)
+request.GetClientIP(ctx)
 ```
 
-### 📤 Response
+### 📤 Response (`github.com/otmc-sw/rest/response`)
 
 Standard REST response builder with fluent API and generic type safety.
 
 ```go
-rest.OK[User](ctx).Data(user).Send()
-rest.Created[Document](ctx).Data(document).Send()
-rest.Accepted[Task](ctx).Data(task).Send()
-rest.NoContent[any](ctx).Send()
+import "github.com/otmc-sw/rest/response"
+
+response.OK[User](ctx).Data(user).Send()
+response.Created[Document](ctx).Data(document).Send()
+response.Accepted[Task](ctx).Data(task).Send()
+response.NoContent[any](ctx).Send()
+response.New[User](ctx, 200).Data(user).Message("ok").Send()
 ```
 
-### ❌ Errors
+### ❌ Errors (`github.com/otmc-sw/rest/errors`)
 
 Standard REST error types with detailed information, sent through the context.
 
 ```go
-rest.NewError().
+import "github.com/otmc-sw/rest/errors"
+
+errors.New().
     BadRequest().
     Summary("Validation failed").
     Detail("Email is required").
     Send(ctx)
 ```
 
-### ✅ Validator
+Available status helpers: `BadRequest`, `Unauthorized`, `Forbidden`, `NotFound`,
+`Conflict`, `UnprocessableEntity`, `InternalError`, `ServiceUnavailable`, or set a
+custom code with `Code(429)`. The error response includes code, key, type, summary,
+detail, and (when built) file/line/function for debugging.
 
-Fluent validation helpers — independent from HTTP.
+### ✅ Validator (`github.com/otmc-sw/rest/validator`)
+
+Fluent validation helpers — independent from HTTP. Also re-exported as `rest.Validate()`.
 
 ```go
-rest.Validate().
+import "github.com/otmc-sw/rest/validator"
+
+validator.New().
     Required(req.Name).
     Min(req.Name, 3).
     Max(req.Name, 100).
@@ -237,14 +390,21 @@ rest.Validate().
     Validate()
 ```
 
-### 🔀 Nullable
+Additional helpers: `Between`, `URL`, `Numeric`, `Alpha`, `AlphaNumeric`, `Match`,
+`Equals`, `OneOf`, `MinInt`, `MaxInt`, `Positive`, `Negative`, `HasUpperCase`,
+`HasLowerCase`, `HasDigit`, `HasSpecialChar`, and `Custom`.
+
+### 🔀 Nullable (`github.com/otmc-sw/rest/nullable`)
 
 Convert values to lightweight nullable types. No SQL driver dependency.
 
 ```go
+import "github.com/otmc-sw/rest/nullable"
+
 nullable.String(req.Name)
 nullable.StringPtr(req.Description)
 nullable.Int64(req.ParentID)
+nullable.Int64Ptr(req.ParentID)
 nullable.Float64(req.Price)
 nullable.Bool(req.IsActive)
 nullable.Time(req.CreatedAt)
@@ -252,59 +412,82 @@ nullable.Time(req.CreatedAt)
 nullable.NewStringBuilder(req.Status).Default("draft")
 ```
 
-### 🔄 Converter
+### 🔄 Converter (`github.com/otmc-sw/rest/converter`)
 
-Type conversion helpers.
+Type conversion helpers between primitives and nullable types.
 
 ```go
+import "github.com/otmc-sw/rest/converter"
+
 converter.Int64(str)
+converter.Int64OrDefault(str, 0)
 converter.String(nullString)
+converter.StringPtr(nullString)
 converter.Time(nullTime)
 converter.Bool(nullBool)
 converter.Int64FromNull(nullInt64)
 converter.Float64FromNull(nullFloat64)
+converter.ToNullString(s)
 ```
 
-### 📋 JSONx
+### 📋 JSONx (`github.com/otmc-sw/rest/jsonx`)
 
 JSON helper utilities.
 
 ```go
+import "github.com/otmc-sw/rest/jsonx"
+
 jsonx.Marshal(data)
+jsonx.MarshalToString(data)
 jsonx.Unmarshal(raw, &v)
-jsonx.SQL(raw)
+jsonx.UnmarshalString(s, &v)
+jsonx.SQL(raw)            // wrap valid JSON as a nullable string (e.g. for SQL columns)
 jsonx.Valid(raw)
 jsonx.ParseJSONOrNull(s)
 ```
 
-### 📄 Pagination
+### 📄 Pagination (`github.com/otmc-sw/rest/pagination`)
 
 ```go
+import "github.com/otmc-sw/rest/pagination"
+
 page := pagination.New(ctx).DefaultSize(20).Page()
 offset := page.Offset()
 limit := page.Limit()
 meta := pagination.NewMeta(page, totalCount)
 ```
 
-### 🔍 Filter
+Default page is `1`, default size `20`, maximum size `100`. Reads `page` and `size`
+query parameters.
+
+### 🔍 Filter (`github.com/otmc-sw/rest/filter`)
 
 ```go
+import "github.com/otmc-sw/rest/filter"
+
 f := filter.New(ctx).Build()
-// f.Keyword, f.Sort, f.Order, f.Page, f.Size
+// f.Keyword, f.Sort, f.Order (filter.OrderAsc | filter.OrderDesc), f.Page, f.Size
 ```
 
-### 🛡️ Middleware
+Reads `keyword`, `sort`, `order`, `page`, and `size` query parameters.
 
-Framework-agnostic middleware helpers operating on `context.Context`.
+### 🛡️ Middleware (`github.com/otmc-sw/rest/middleware`)
+
+Framework-agnostic middleware helpers operating on `rest.Context`.
 
 ```go
-mw := middleware.RequestID("X-Request-ID")
+import "github.com/otmc-sw/rest/middleware"
+
+mw := middleware.RequestID("X-Request-ID") // defaults to "X-Request-ID"
 mw := middleware.Logger()
 mw := middleware.Recover()
 mw := middleware.Timeout(30 * time.Second)
 ```
 
-### 🎯 Context
+Each helper returns `func(ctx rest.Context, next func(ctx rest.Context) error) error`,
+so it can be adapted to any framework's middleware signature.
+
+### 🎯 Context (`github.com/otmc-sw/rest/context`)
 
 The minimal framework-agnostic context interface that every package depends on.
 
@@ -318,6 +501,7 @@ type Context interface {
     Header(key string) string
     Cookie(key string) string
 
+    Body() io.Reader
     Bind(v interface{}) error
     JSON(status int, body interface{}) error
     Status(code int)
@@ -337,7 +521,7 @@ type Context interface {
 Easy to learn and use.
 
 ```go
-return rest.Create[Req, Entity, Res](ctx).Bind().Handle(service.Create).Respond()
+return rest.Create[Req, Entity, Res](ctx).Bind().Validate(validate).Exec(service).Respond()
 ```
 
 ### 🔗 Fluent API
@@ -347,9 +531,9 @@ Everything supports method chaining with generic type safety.
 ```go
 return rest.
     Update[UpdateDocumentRequest, Document, DocumentResponse](ctx).
-    Param("id").
     Bind().
-    HandleWithID(documentService.Update).
+    Validate(ValidateDocument).
+    Exec(updateDocument).
     Respond()
 ```
 
@@ -357,7 +541,7 @@ return rest.
 
 The core library does **not** depend on Fiber, Gin, Echo, Chi or net/http. There is
 no `adapters/` package inside this module — adapters live in your application or in a
-separate module you control.
+separate module you control (see [`examples/fiber`](examples/fiber)).
 
 ```
 Fiber / Gin / Echo / net/http
@@ -374,15 +558,15 @@ Fiber / Gin / Echo / net/http
 Use Go Generics whenever possible.
 
 ```go
-rest.Bind(ctx, &req)
-rest.Map[UserResponse](user)
-rest.OK[User](ctx).Data(user).Send()
+rest.Create[UserRequest, db.User, UserResponse](ctx)
+mapper.Map[UserResponse](user)
+response.OK[User](ctx).Data(user).Send()
 ```
 
 ### 🚫 No Reflection Required
 
 Reflection is only used as a fallback in `mapper.Auto` when no explicit mapping is
-registered. Prefer `rest.Register` with generics.
+registered. Prefer `rest.Register` / `mapper.Register` with generics.
 
 ### 🎯 Minimal
 
