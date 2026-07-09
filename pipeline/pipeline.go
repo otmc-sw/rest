@@ -64,8 +64,6 @@ func (p *Pipeline[Req, Entity, Res]) ID() string {
 	return p.id
 }
 
-// IntID parses the id string into int64 and stores it.
-// If parsing fails, it sets bindErr so subsequent steps are skipped.
 func (p *Pipeline[Req, Entity, Res]) IntID() *Pipeline[Req, Entity, Res] {
 	if p.bindErr != nil || p.id == "" {
 		return p
@@ -79,7 +77,6 @@ func (p *Pipeline[Req, Entity, Res]) IntID() *Pipeline[Req, Entity, Res] {
 	return p
 }
 
-// IDInt returns the parsed int64 id.
 func (p *Pipeline[Req, Entity, Res]) IDInt() int64 {
 	return p.parsedID
 }
@@ -128,23 +125,16 @@ func (p *Pipeline[Req, Entity, Res]) HandleWithID(handler UpdateHandler[Req, Ent
 	return p
 }
 
-// SetEntity sets the entity directly. Used with Exec/ExecWithID when the handler
-// needs to return a specific entity (e.g. from a database query) instead of auto-mapping.
 func (p *Pipeline[Req, Entity, Res]) SetEntity(entity Entity) *Pipeline[Req, Entity, Res] {
 	p.entity = &entity
 	return p
 }
 
-// SetEntityFn sets a lazy function that returns the entity at Respond time.
-// Used when the entity depends on data fetched inside ExecWithID.
 func (p *Pipeline[Req, Entity, Res]) SetEntityFn(fn func() Entity) *Pipeline[Req, Entity, Res] {
 	p.entityFn = fn
 	return p
 }
 
-// Exec runs a handler that only returns an error.
-// On success, it auto-maps Req -> Entity using the mapper.
-// On error, it stores the error for Respond to handle.
 func (p *Pipeline[Req, Entity, Res]) Exec(handler ExecHandler[Req]) *Pipeline[Req, Entity, Res] {
 	if p.bindErr != nil || p.bound == nil {
 		return p
@@ -158,9 +148,6 @@ func (p *Pipeline[Req, Entity, Res]) Exec(handler ExecHandler[Req]) *Pipeline[Re
 	return p
 }
 
-// ExecWithID runs a handler that receives the parsed int64 id and only returns an error.
-// On success, it auto-maps Req -> Entity using the mapper.
-// On error, it stores the error for Respond to handle.
 func (p *Pipeline[Req, Entity, Res]) ExecWithID(handler ExecHandlerWithID[Req]) *Pipeline[Req, Entity, Res] {
 	if p.bindErr != nil || p.bound == nil {
 		return p
@@ -174,8 +161,6 @@ func (p *Pipeline[Req, Entity, Res]) ExecWithID(handler ExecHandlerWithID[Req]) 
 	return p
 }
 
-// ExecWithIDResult runs a handler that returns (Entity, error) along with the parsed id.
-// On error, stores the error for Respond to handle.
 func (p *Pipeline[Req, Entity, Res]) ExecWithIDResult(handler func(ctx context.Context, req Req, id int64) (Entity, error)) *Pipeline[Req, Entity, Res] {
 	if p.bindErr != nil || p.bound == nil {
 		return p
@@ -191,7 +176,6 @@ func (p *Pipeline[Req, Entity, Res]) ExecWithIDResult(handler func(ctx context.C
 
 func (p *Pipeline[Req, Entity, Res]) Respond() error {
 	if p.bindErr != nil {
-		// If the error is an errors.Error, use its status code
 		if appErr, ok := p.bindErr.(errors.Error); ok {
 			return errors.New().
 				Code(appErr.Details.Code).
@@ -202,7 +186,6 @@ func (p *Pipeline[Req, Entity, Res]) Respond() error {
 		return errors.New().BadRequest().Summary("request failed").Detail(p.bindErr).Send(p.ctx)
 	}
 
-	// Evaluate lazy entity function if set
 	if p.entityFn != nil {
 		entity := p.entityFn()
 		p.entity = &entity
