@@ -7,13 +7,19 @@ GET {{baseUrl}}/users
 GET {{baseUrl}}/users/1
 
 ### Create a user (valid)
+### @name CreateUser
 POST {{baseUrl}}/users
 Content-Type: application/json
 
 {
+  "id": 2,
   "username": "trung",
   "email": "trung@otmc.dev"
 }
+
+
+### Delete a user (valid)
+DELETE {{baseUrl}}/users/2
 
 ### Create a user (missing username -> validation error)
 POST {{baseUrl}}/users

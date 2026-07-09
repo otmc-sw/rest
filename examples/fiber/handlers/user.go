@@ -38,12 +38,12 @@ func CreateUser(c *fiber.Ctx) error {
 		Create[UserRequest, db.User, UserResponse](FiberContext{Ctx: c}).
 		Bind().
 		Validate(ValidateUser).
-		Exec(func(ctx rest.Context, req UserRequest) error {
+		Exec(func(ctx rest.Context, req UserRequest, id any) (any, error) {
 			params := db.CreateUserParams{
 				Username: req.Email,
 				Email:    req.Email,
 			}
-			return database.CreateUser(ctx.Context(), params)
+			return nil, database.CreateUser(ctx.Context(), params)
 		}).
 		Respond()
 }
@@ -51,8 +51,8 @@ func CreateUser(c *fiber.Ctx) error {
 func GetUser(c *fiber.Ctx) error {
 	return rest.
 		Get[struct{}, db.User, UserResponse](FiberContext{Ctx: c}).
-		ExecWithIDResult(func(ctx rest.Context, req struct{}, id int64) (any, error) {
-			return database.GetUser(ctx.Context(), id)
+		Exec(func(ctx rest.Context, req struct{}, id any) (any, error) {
+			return database.GetUser(ctx.Context(), id.(int64))
 		}).
 		Respond()
 }
@@ -60,7 +60,7 @@ func GetUser(c *fiber.Ctx) error {
 func GetAllUsers(c *fiber.Ctx) error {
 	return rest.
 		Get[struct{}, []db.User, []UserResponse](FiberContext{Ctx: c}).
-		ExecResultTyped(func(ctx rest.Context, req struct{}) ([]db.User, error) {
+		Exec(func(ctx rest.Context, req struct{}, id any) (any, error) {
 			return database.GetAllUsers(ctx.Context())
 		}).
 		Respond()
@@ -71,13 +71,13 @@ func UpdateUser(c *fiber.Ctx) error {
 		Update[UserRequest, db.User, UserResponse](FiberContext{Ctx: c}).
 		Bind().
 		Validate(ValidateUser).
-		ExecWithID(func(ctx rest.Context, req UserRequest, id int64) error {
+		Exec(func(ctx rest.Context, req UserRequest, id any) (any, error) {
 			params := db.UpdateUserParams{
 				Username: req.Email,
 				Email:    req.Email,
-				ID:       id,
+				ID:       id.(int64),
 			}
-			return database.UpdateUser(ctx.Context(), params)
+			return nil, database.UpdateUser(ctx.Context(), params)
 		}).
 		Respond()
 }
@@ -85,8 +85,8 @@ func UpdateUser(c *fiber.Ctx) error {
 func DeleteUser(c *fiber.Ctx) error {
 	return rest.
 		Delete[UserResponse](FiberContext{Ctx: c}).
-		ExecWithID(func(ctx rest.Context, req struct{}, id int64) error {
-			return database.DeleteUser(ctx.Context(), id)
+		Exec(func(ctx rest.Context, req struct{}, id any) (any, error) {
+			return nil, database.DeleteUser(ctx.Context(), id.(int64))
 		}).
 		Respond()
 }

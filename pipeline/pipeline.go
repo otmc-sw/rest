@@ -17,18 +17,13 @@ import (
 	"github.com/otmc-sw/rest/validator"
 )
 
-type Handler[Req any, Entity any] func(ctx context.Context, req Req) (Entity, error)
+type Handler[Req any, Entity any] func(ctx context.Context, req Req, id any) (Entity, error)
 
-type UpdateHandler[Req any, Entity any] func(ctx context.Context, id string, req Req) (Entity, error)
-
-type ExecHandler[Req any] func(ctx context.Context, req Req) error
-
-type ExecHandlerWithID[Req any] func(ctx context.Context, req Req, id int64) error
+type ExecHandler[Req any] func(ctx context.Context, req Req, id any) (any, error)
 
 type Pipeline[Req any, Entity any, Res any] struct {
 	ctx      context.Context
-	id       string
-	parsedID int64
+	id       any // string or int64
 	bound    *Req
 	entity   *Entity
 	entityFn func() Entity
@@ -62,31 +57,8 @@ func Delete[Res any](ctx context.Context) *Pipeline[struct{}, struct{}, Res] {
 
 func (p *Pipeline[Req, Entity, Res]) Param(key string) *Pipeline[Req, Entity, Res] {
 	p.id = request.Param(p.ctx, key)
-	debugger.PipelineStep("Param", "key=%s value=%s", key, p.id)
+	debugger.PipelineStep("Param", "key=%s value=%v", key, p.id)
 	return p
-}
-
-func (p *Pipeline[Req, Entity, Res]) ID() string {
-	return p.id
-}
-
-func (p *Pipeline[Req, Entity, Res]) IntID() *Pipeline[Req, Entity, Res] {
-	if p.bindErr != nil || p.id == "" {
-		return p
-	}
-	id, err := strconv.ParseInt(p.id, 10, 64)
-	if err != nil {
-		debugger.Pipeline("IntID parse error: %v", err)
-		p.bindErr = err
-		return p
-	}
-	p.parsedID = id
-	debugger.Pipeline("IntID parsed: %d", id)
-	return p
-}
-
-func (p *Pipeline[Req, Entity, Res]) IDInt() int64 {
-	return p.parsedID
 }
 
 func (p *Pipeline[Req, Entity, Res]) Bind() *Pipeline[Req, Entity, Res] {
@@ -114,12 +86,34 @@ func (p *Pipeline[Req, Entity, Res]) Validate(fn func(req Req) error) *Pipeline[
 	return p
 }
 
+func (p *Pipeline[Req, Entity, Res]) autoParseID() {
+	if p.bindErr != nil {
+		return
+	}
+	s, ok := p.id.(string)
+	if !ok || s == "" {
+		return
+	}
+	if n, err := strconv.ParseInt(s, 10, 64); err == nil {
+		p.id = n
+		debugger.Pipeline("autoParseID: parsed %q -> %d", s, n)
+	}
+}
+
+func (p *Pipeline[Req, Entity, Res]) ensureID() {
+	if p.id == nil {
+		p.id = request.Param(p.ctx, "id")
+	}
+	p.autoParseID()
+}
+
 func (p *Pipeline[Req, Entity, Res]) Handle(handler Handler[Req, Entity]) *Pipeline[Req, Entity, Res] {
 	if p.bindErr != nil || p.bound == nil {
 		return p
 	}
+	p.ensureID()
 	debugger.PipelineStep("Handle", "executing handler")
-	entity, err := handler(p.ctx, *p.bound)
+	entity, err := handler(p.ctx, *p.bound, p.id)
 	if err != nil {
 		debugger.Pipeline("Handle error: %v", err)
 		p.bindErr = err
@@ -127,29 +121,6 @@ func (p *Pipeline[Req, Entity, Res]) Handle(handler Handler[Req, Entity]) *Pipel
 	}
 	debugger.Pipeline("Handle success")
 	p.entity = &entity
-	return p
-}
-
-func (p *Pipeline[Req, Entity, Res]) HandleWithID(handler UpdateHandler[Req, Entity]) *Pipeline[Req, Entity, Res] {
-	if p.bindErr != nil || p.bound == nil {
-		return p
-	}
-	entity, err := handler(p.ctx, p.id, *p.bound)
-	if err != nil {
-		p.bindErr = err
-		return p
-	}
-	p.entity = &entity
-	return p
-}
-
-func (p *Pipeline[Req, Entity, Res]) SetEntity(entity Entity) *Pipeline[Req, Entity, Res] {
-	p.entity = &entity
-	return p
-}
-
-func (p *Pipeline[Req, Entity, Res]) SetEntityFn(fn func() Entity) *Pipeline[Req, Entity, Res] {
-	p.entityFn = fn
 	return p
 }
 
@@ -161,149 +132,22 @@ func (p *Pipeline[Req, Entity, Res]) Exec(handler ExecHandler[Req]) *Pipeline[Re
 		var req Req
 		p.bound = &req
 	}
-	if err := handler(p.ctx, *p.bound); err != nil {
-		p.bindErr = err
-		return p
-	}
-	entity := mapper.Map[Entity](*p.bound)
-	p.entity = &entity
-	return p
-}
-
-func (p *Pipeline[Req, Entity, Res]) ExecWithID(handler ExecHandlerWithID[Req]) *Pipeline[Req, Entity, Res] {
-	if p.bindErr != nil {
-		return p
-	}
-	if p.bound == nil {
-		var req Req
-		p.bound = &req
-	}
-	if p.id == "" {
-		p.id = request.Param(p.ctx, "id")
-	}
-	if p.parsedID == 0 && p.id != "" {
-		id, err := strconv.ParseInt(p.id, 10, 64)
-		if err != nil {
-			p.bindErr = err
-			return p
-		}
-		p.parsedID = id
-	}
-	if err := handler(p.ctx, *p.bound, p.parsedID); err != nil {
-		p.bindErr = err
-		return p
-	}
-	entity := mapper.Map[Entity](*p.bound)
-	p.entity = &entity
-	return p
-}
-
-func (p *Pipeline[Req, Entity, Res]) ExecWithIDResult(handler func(ctx context.Context, req Req, id int64) (any, error)) *Pipeline[Req, Entity, Res] {
-	if p.bindErr != nil {
-		return p
-	}
-	if p.bound == nil {
-		var req Req
-		p.bound = &req
-	}
-	if p.id == "" {
-		p.id = request.Param(p.ctx, "id")
-	}
-	if p.parsedID == 0 && p.id != "" {
-		id, err := strconv.ParseInt(p.id, 10, 64)
-		if err != nil {
-			p.bindErr = err
-			return p
-		}
-		p.parsedID = id
-	}
-	result, err := handler(p.ctx, *p.bound, p.parsedID)
+	p.ensureID()
+	debugger.PipelineStep("Exec", "executing handler")
+	result, err := handler(p.ctx, *p.bound, p.id)
 	if err != nil {
+		debugger.Pipeline("Exec error: %v", err)
 		p.bindErr = err
 		return p
 	}
-	entity := mapper.Map[Entity](result)
-	p.entity = &entity
-	return p
-}
-
-func (p *Pipeline[Req, Entity, Res]) ExecWithIDResultTyped(handler func(ctx context.Context, req Req, id int64) (Entity, error)) *Pipeline[Req, Entity, Res] {
-	if p.bindErr != nil {
-		return p
+	debugger.Pipeline("Exec success")
+	if result != nil {
+		entity := mapper.Map[Entity](result)
+		p.entity = &entity
+	} else {
+		entity := mapper.Map[Entity](*p.bound)
+		p.entity = &entity
 	}
-	if p.bound == nil {
-		var req Req
-		p.bound = &req
-	}
-	if p.id == "" {
-		p.id = request.Param(p.ctx, "id")
-	}
-	if p.parsedID == 0 && p.id != "" {
-		id, err := strconv.ParseInt(p.id, 10, 64)
-		if err != nil {
-			p.bindErr = err
-			return p
-		}
-		p.parsedID = id
-	}
-	entity, err := handler(p.ctx, *p.bound, p.parsedID)
-	if err != nil {
-		p.bindErr = err
-		return p
-	}
-	p.entity = &entity
-	return p
-}
-
-func (p *Pipeline[Req, Entity, Res]) ExecResult(handler func(ctx context.Context, req Req) (any, error)) *Pipeline[Req, Entity, Res] {
-	if p.bindErr != nil {
-		return p
-	}
-	if p.bound == nil {
-		var req Req
-		p.bound = &req
-	}
-	result, err := handler(p.ctx, *p.bound)
-	if err != nil {
-		p.bindErr = err
-		return p
-	}
-	entity := mapper.Map[Entity](result)
-	p.entity = &entity
-	return p
-}
-
-func (p *Pipeline[Req, Entity, Res]) ExecResultTypedSlice(handler func(ctx context.Context, req Req) (Entity, error)) *Pipeline[Req, Entity, Res] {
-	if p.bindErr != nil {
-		return p
-	}
-	if p.bound == nil {
-		var req Req
-		p.bound = &req
-	}
-	entity, err := handler(p.ctx, *p.bound)
-	if err != nil {
-		p.bindErr = err
-		return p
-	}
-	p.entity = &entity
-	return p
-}
-
-func (p *Pipeline[Req, Entity, Res]) ExecResultTyped(handler func(ctx context.Context, req Req) (Entity, error)) *Pipeline[Req, Entity, Res] {
-	if p.bindErr != nil {
-		return p
-	}
-	if p.bound == nil {
-		var req Req
-		p.bound = &req
-	}
-	entity, err := handler(p.ctx, *p.bound)
-	if err != nil {
-		p.bindErr = err
-		return p
-	}
-	p.entity = &entity
 	return p
 }
 

@@ -70,7 +70,7 @@ func TestPipelineEndToEnd(t *testing.T) {
 		header: http.Header{},
 	}
 
-	handle := func(ctx restcontext.Context, req CreateDocRequest) (DocEntity, error) {
+	handle := func(ctx restcontext.Context, req CreateDocRequest, id any) (DocEntity, error) {
 		return DocEntity{ID: "42", Title: req.Title}, nil
 	}
 
