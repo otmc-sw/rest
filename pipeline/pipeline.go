@@ -221,16 +221,47 @@ func (p *Pipeline[Req, Entity, Res]) ExecWithIDResultTyped(handler func(ctx cont
 	return p
 }
 
+func (p *Pipeline[Req, Entity, Res]) ExecResult(handler func(ctx context.Context, req Req) (any, error)) *Pipeline[Req, Entity, Res] {
+	if p.bindErr != nil {
+		return p
+	}
+	if p.bound == nil {
+		var req Req
+		p.bound = &req
+	}
+	result, err := handler(p.ctx, *p.bound)
+	if err != nil {
+		p.bindErr = err
+		return p
+	}
+	entity := mapper.Map[Entity](result)
+	p.entity = &entity
+	return p
+}
+
+func (p *Pipeline[Req, Entity, Res]) ExecResultTyped(handler func(ctx context.Context, req Req) (Entity, error)) *Pipeline[Req, Entity, Res] {
+	if p.bindErr != nil || p.bound == nil {
+		return p
+	}
+	entity, err := handler(p.ctx, *p.bound)
+	if err != nil {
+		p.bindErr = err
+		return p
+	}
+	p.entity = &entity
+	return p
+}
+
 func (p *Pipeline[Req, Entity, Res]) Respond() error {
 	if p.bindErr != nil {
 		if appErr, ok := p.bindErr.(errors.Error); ok {
-			return errors.New().
+			return errors.New().Skip(2).
 				Code(appErr.Details.Code).
 				Summary("request failed").
 				Detail(p.bindErr).
 				Send(p.ctx)
 		}
-		return errors.New().BadRequest().Summary("request failed").Detail(p.bindErr).Send(p.ctx)
+		return errors.New().Skip(2).BadRequest().Summary("request failed").Detail(p.bindErr).Send(p.ctx)
 	}
 
 	if p.entityFn != nil {
@@ -239,7 +270,7 @@ func (p *Pipeline[Req, Entity, Res]) Respond() error {
 	}
 
 	if p.entity == nil {
-		return errors.New().InternalError().Summary("no result produced").Send(p.ctx)
+		return errors.New().Skip(2).InternalError().Summary("no result produced").Send(p.ctx)
 	}
 
 	res := mapper.Map[Res](*p.entity)

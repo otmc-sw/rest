@@ -62,7 +62,7 @@ func GetUser(c *fiber.Ctx) error {
 func GetAllUsers(c *fiber.Ctx) error {
 	return rest.
 		Get[struct{}, User, UserResponse](FiberContext{Ctx: c}).
-		ExecWithIDResult(func(ctx rest.Context, req struct{}, id int64) (any, error) {
+		ExecResult(func(ctx rest.Context, req struct{}) (any, error) {
 			return database.GetAllUsers(ctx.Context())
 		}).
 		Respond()

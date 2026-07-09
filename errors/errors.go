@@ -153,7 +153,7 @@ func (b *Builder) Data(data interface{}) *Builder {
 }
 
 func (b *Builder) Skip(skip int) *Builder {
-	b.skip = skip
+	b.skip += skip
 	return b
 }
 

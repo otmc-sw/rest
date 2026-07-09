@@ -17,7 +17,8 @@ $SrcDirs       = @(
 )
 $IgnoredDirs   = @(
     "\logs\",
-    "\docs\"
+    "\docs\",
+    "\sqlc\"
 )
 $Whitelist     = @(
     "Apache License",
