@@ -6,11 +6,13 @@
 package handlers
 
 import (
-	"fmt"
+	"strconv"
 
-	"github.com/gofiber/fiber/v2"
 	rest "github.com/otmc-sw/rest"
+	sqlc "github.com/otmc-sw/rest/examples/fiber/db/sqlc"
 )
+
+var database *sqlc.Queries
 
 type User struct {
 	ID    string
@@ -36,60 +38,90 @@ func ValidateUser(r UserRequest) error {
 		Validate()
 }
 
-func CreateUser(c *fiber.Ctx) error {
+func CreateUser() error {
 	return rest.
-		Create[UserRequest, User, UserResponse](FiberContext{Ctx: c}).
+		Create[UserRequest, User, UserResponse](FiberContext{}).
 		Bind().
 		Validate(ValidateUser).
 		Handle(func(ctx rest.Context, req UserRequest) (User, error) {
-			user := User{
-				ID:    fmt.Sprintf("usr_%s", req.Email),
+			params := sqlc.CreateUserParams{
+				Username: req.Email,
+				Email:    req.Email,
+			}
+			err := database.CreateUser(ctx.Context(), params)
+			if err != nil {
+				return User{}, err
+			}
+			return User{
+				ID:    req.Email,
 				Name:  req.Name,
 				Email: req.Email,
-			}
-			return user, nil
+			}, nil
 		}).
 		Respond()
 }
 
-func GetUser(c *fiber.Ctx) error {
+func GetUser() error {
 	return rest.
-		Get[struct{}, User, UserResponse](FiberContext{Ctx: c}).
+		Get[struct{}, User, UserResponse](FiberContext{}).
 		Handle(func(ctx rest.Context, req struct{}) (User, error) {
-			id := ctx.Param("id")
-			user := User{
-				ID:    id,
-				Name:  "John Doe",
-				Email: "john@example.com",
+			id := c.Param("id")
+			intID, err := strconv.ParseInt(id, 10, 64)
+			if err != nil {
+				return User{}, err
 			}
-			return user, nil
+			user, err := database.GetUser(ctx.Context(), intID)
+			if err != nil {
+				return User{}, err
+			}
+			return User{
+				ID:    strconv.FormatInt(user.ID, 10),
+				Name:  user.Username,
+				Email: user.Email,
+			}, nil
 		}).
 		Respond()
 }
 
-func UpdateUser(c *fiber.Ctx) error {
+func UpdateUser() error {
 	return rest.
-		Update[UserRequest, User, UserResponse](FiberContext{Ctx: c}).
+		Update[UserRequest, User, UserResponse](FiberContext{}).
 		Bind().
 		Validate(ValidateUser).
 		Handle(func(ctx rest.Context, req UserRequest) (User, error) {
-			id := ctx.Param("id")
-			user := User{
-				ID:    id,
+			id := c.Param("id")
+			intID, err := strconv.ParseInt(id, 10, 64)
+			if err != nil {
+				return User{}, err
+			}
+			params := sqlc.UpdateUserParams{
+				Username: req.Email,
+				Email:    req.Email,
+				ID:       intID,
+			}
+			err = database.UpdateUser(ctx.Context(), params)
+			if err != nil {
+				return User{}, err
+			}
+			return User{
+				ID:    strconv.FormatInt(intID, 10),
 				Name:  req.Name,
 				Email: req.Email,
-			}
-			return user, nil
+			}, nil
 		}).
 		Respond()
 }
 
-func DeleteUser(c *fiber.Ctx) error {
+func DeleteUser() error {
 	return rest.
-		Delete[UserResponse](FiberContext{Ctx: c}).
+		Delete[UserResponse](FiberContext{}).
 		Handle(func(ctx rest.Context, req struct{}) (struct{}, error) {
-			ctx.Param("id")
-			return struct{}{}, nil
+			id := c.Param("id")
+			intID, err := strconv.ParseInt(id, 10, 64)
+			if err != nil {
+				return struct{}{}, err
+			}
+			return struct{}{}, database.DeleteUser(ctx.Context(), intID)
 		}).
 		Respond()
 }

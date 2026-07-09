@@ -22,7 +22,14 @@ if ($args.Count -gt 0) {
 switch ($option) {
     "1" {
         Set-Location $TOP/examples/fiber
-        go run main.go
+        sqlc generate
+        go mod tidy
+        go build -o fiber-example.exe
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Go build failed" -ForegroundColor Red
+            exit 1
+        }
+        & .\fiber-example.exe
     }
     "2" {
         Set-Location $TOP/examples/gin
