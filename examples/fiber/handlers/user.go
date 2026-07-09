@@ -6,8 +6,6 @@
 package handlers
 
 import (
-	"strconv"
-
 	"github.com/gofiber/fiber/v2"
 	rest "github.com/otmc-sw/rest"
 	sqlc "github.com/otmc-sw/rest/examples/fiber/db/sqlc"
@@ -55,18 +53,8 @@ func CreateUser(c *fiber.Ctx) error {
 func GetUser(c *fiber.Ctx) error {
 	return rest.
 		Get[struct{}, User, UserResponse](FiberContext{Ctx: c}).
-		Param("id").
-		IntID().
-		ExecWithIDResult(func(ctx rest.Context, req struct{}, id int64) (User, error) {
-			row, err := database.GetUser(ctx.Context(), id)
-			if err != nil {
-				return User{}, err
-			}
-			return User{
-				ID:       strconv.FormatInt(row.ID, 10),
-				Username: row.Username,
-				Email:    row.Email,
-			}, nil
+		ExecWithIDResult(func(ctx rest.Context, req struct{}, id int64) (any, error) {
+			return database.GetUser(ctx.Context(), id)
 		}).
 		Respond()
 }
@@ -74,16 +62,8 @@ func GetUser(c *fiber.Ctx) error {
 func GetAllUsers(c *fiber.Ctx) error {
 	return rest.
 		Get[struct{}, User, UserResponse](FiberContext{Ctx: c}).
-		ExecWithIDResult(func(ctx rest.Context, req struct{}, id int64) (User, error) {
-			rows, err := database.GetAllUsers(ctx.Context())
-			if err != nil {
-				return User{}, err
-			}
-			return User{
-				ID:       strconv.FormatInt(rows[0].ID, 10),
-				Username: rows[0].Username,
-				Email:    rows[0].Email,
-			}, nil
+		ExecWithIDResult(func(ctx rest.Context, req struct{}, id int64) (any, error) {
+			return database.GetAllUsers(ctx.Context())
 		}).
 		Respond()
 }
@@ -91,8 +71,6 @@ func GetAllUsers(c *fiber.Ctx) error {
 func UpdateUser(c *fiber.Ctx) error {
 	return rest.
 		Update[UserRequest, User, UserResponse](FiberContext{Ctx: c}).
-		Param("id").
-		IntID().
 		Bind().
 		Validate(ValidateUser).
 		ExecWithID(func(ctx rest.Context, req UserRequest, id int64) error {
@@ -109,8 +87,6 @@ func UpdateUser(c *fiber.Ctx) error {
 func DeleteUser(c *fiber.Ctx) error {
 	return rest.
 		Delete[UserResponse](FiberContext{Ctx: c}).
-		Param("id").
-		IntID().
 		ExecWithID(func(ctx rest.Context, req struct{}, id int64) error {
 			return database.DeleteUser(ctx.Context(), id)
 		}).

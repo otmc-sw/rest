@@ -25,14 +25,14 @@ type ExecHandler[Req any] func(ctx context.Context, req Req) error
 type ExecHandlerWithID[Req any] func(ctx context.Context, req Req, id int64) error
 
 type Pipeline[Req any, Entity any, Res any] struct {
-	ctx       context.Context
-	id        string
-	parsedID  int64
-	bound     *Req
-	entity    *Entity
-	entityFn  func() Entity
-	bindErr   error
-	status    int
+	ctx      context.Context
+	id       string
+	parsedID int64
+	bound    *Req
+	entity   *Entity
+	entityFn func() Entity
+	bindErr  error
+	status   int
 }
 
 func newPipeline[Req any, Entity any, Res any](ctx context.Context, status int) *Pipeline[Req, Entity, Res] {
@@ -152,6 +152,17 @@ func (p *Pipeline[Req, Entity, Res]) ExecWithID(handler ExecHandlerWithID[Req]) 
 	if p.bindErr != nil || p.bound == nil {
 		return p
 	}
+	if p.id == "" {
+		p.id = request.Param(p.ctx, "id")
+	}
+	if p.parsedID == 0 && p.id != "" {
+		id, err := strconv.ParseInt(p.id, 10, 64)
+		if err != nil {
+			p.bindErr = err
+			return p
+		}
+		p.parsedID = id
+	}
 	if err := handler(p.ctx, *p.bound, p.parsedID); err != nil {
 		p.bindErr = err
 		return p
@@ -161,9 +172,45 @@ func (p *Pipeline[Req, Entity, Res]) ExecWithID(handler ExecHandlerWithID[Req]) 
 	return p
 }
 
-func (p *Pipeline[Req, Entity, Res]) ExecWithIDResult(handler func(ctx context.Context, req Req, id int64) (Entity, error)) *Pipeline[Req, Entity, Res] {
+func (p *Pipeline[Req, Entity, Res]) ExecWithIDResult(handler func(ctx context.Context, req Req, id int64) (any, error)) *Pipeline[Req, Entity, Res] {
 	if p.bindErr != nil || p.bound == nil {
 		return p
+	}
+	if p.id == "" {
+		p.id = request.Param(p.ctx, "id")
+	}
+	if p.parsedID == 0 && p.id != "" {
+		id, err := strconv.ParseInt(p.id, 10, 64)
+		if err != nil {
+			p.bindErr = err
+			return p
+		}
+		p.parsedID = id
+	}
+	result, err := handler(p.ctx, *p.bound, p.parsedID)
+	if err != nil {
+		p.bindErr = err
+		return p
+	}
+	entity := mapper.Map[Entity](result)
+	p.entity = &entity
+	return p
+}
+
+func (p *Pipeline[Req, Entity, Res]) ExecWithIDResultTyped(handler func(ctx context.Context, req Req, id int64) (Entity, error)) *Pipeline[Req, Entity, Res] {
+	if p.bindErr != nil || p.bound == nil {
+		return p
+	}
+	if p.id == "" {
+		p.id = request.Param(p.ctx, "id")
+	}
+	if p.parsedID == 0 && p.id != "" {
+		id, err := strconv.ParseInt(p.id, 10, 64)
+		if err != nil {
+			p.bindErr = err
+			return p
+		}
+		p.parsedID = id
 	}
 	entity, err := handler(p.ctx, *p.bound, p.parsedID)
 	if err != nil {

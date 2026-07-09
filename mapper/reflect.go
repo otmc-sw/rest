@@ -5,7 +5,11 @@
 **/
 package mapper
 
-import "reflect"
+import (
+	"fmt"
+	"reflect"
+	"strconv"
+)
 
 func copyStructFields(src, dst interface{}) {
 	srcVal := reflect.ValueOf(src)
@@ -39,9 +43,47 @@ func copyStructFields(src, dst interface{}) {
 		if idx, ok := dstFields[srcField.Name]; ok {
 			dstField := dstVal.Field(idx)
 			srcFieldVal := srcVal.Field(i)
-			if dstField.CanSet() && srcFieldVal.Type().AssignableTo(dstField.Type()) {
-				dstField.Set(srcFieldVal)
+			if dstField.CanSet() {
+				if srcFieldVal.Type().AssignableTo(dstField.Type()) {
+					dstField.Set(srcFieldVal)
+				} else if err := convertAndSet(dstField, srcFieldVal); err == nil {
+				}
 			}
 		}
 	}
+}
+
+func convertAndSet(dstField, srcField reflect.Value) error {
+	srcType := srcField.Type()
+	dstType := dstField.Type()
+
+	if srcType.Kind() == reflect.Int64 && dstType.Kind() == reflect.String {
+		dstField.SetString(strconv.FormatInt(srcField.Int(), 10))
+		return nil
+	}
+
+	if srcType.Kind() == reflect.Int && dstType.Kind() == reflect.String {
+		dstField.SetString(strconv.Itoa(int(srcField.Int())))
+		return nil
+	}
+
+	if srcType.Kind() == reflect.String && dstType.Kind() == reflect.Int64 {
+		val, err := strconv.ParseInt(srcField.String(), 10, 64)
+		if err != nil {
+			return err
+		}
+		dstField.SetInt(val)
+		return nil
+	}
+
+	if srcType.Kind() == reflect.String && dstType.Kind() == reflect.Int {
+		val, err := strconv.Atoi(srcField.String())
+		if err != nil {
+			return err
+		}
+		dstField.SetInt(int64(val))
+		return nil
+	}
+
+	return fmt.Errorf("cannot convert %v to %v", srcType, dstType)
 }

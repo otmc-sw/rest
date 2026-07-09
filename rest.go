@@ -23,7 +23,6 @@ type ExecHandler[Req any] = pipeline.ExecHandler[Req]
 
 type Pipeline[Req any, Entity any, Res any] = pipeline.Pipeline[Req, Entity, Res]
 
-
 func Create[Req any, Entity any, Res any](ctx Context) *Pipeline[Req, Entity, Res] {
 	return pipeline.Create[Req, Entity, Res](ctx)
 }
@@ -40,16 +39,13 @@ func Delete[Res any](ctx Context) *Pipeline[struct{}, struct{}, Res] {
 	return pipeline.Delete[Res](ctx)
 }
 
-
 func Register[Src any, Dst any](fn func(Src) Dst) {
 	mapper.Register(fn)
 }
 
-
 func Validate() *validator.Validator {
 	return validator.New()
 }
-
 
 func NewError() *errors.Builder {
 	return errors.New()
