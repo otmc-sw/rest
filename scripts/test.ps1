@@ -4,6 +4,8 @@
 # Contributors: Nguyen Van Trung, Nguyen Thi Hoai, OTMC Contributors.
 #
 
+$TOP = $PSScriptRoot + "/.."
+
 Write-Host '╔══════════════════════════════════════════════════╗' -ForegroundColor Cyan
 Write-Host '║              Test Manager v1.0                   ║' -ForegroundColor Cyan
 Write-Host '╚══════════════════════════════════════════════════╝' -ForegroundColor Cyan
@@ -11,23 +13,23 @@ Write-Host '╚═════════════════════�
 if ($args.Count -gt 0) {
     $option = $args[0]
 } else {
-    Write-Host "  1. Print logs" -ForegroundColor Green
-    Write-Host "  2. Rotate logs" -ForegroundColor Green
+    Write-Host "  1. Run Fiber example" -ForegroundColor Green
+    Write-Host "  2. Run Gin example" -ForegroundColor Green
     Write-Host "  3. Go test ./..." -ForegroundColor Green
     $option = Read-Host ">> Select option (1-3)"
 }
 
 switch ($option) {
     "1" {
-        Set-Location $PSScriptRoot/..
-        go run tests/printer/main.go
+        Set-Location $TOP/examples/fiber
+        go run main.go
     }
     "2" {
-        Set-Location $PSScriptRoot/..
-        go run tests/rotator/main.go
+        Set-Location $TOP/examples/gin
+        go run main.go
     }
     "3" {
-        Set-Location $PSScriptRoot/..
+        Set-Location $TOP
         go test -v ./...
     }
     default {
