@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @License Apache License 2.0
  * @Copyright (c) 2026 OTMC Softwares. OTMC Golang REST.
  * @Contributors Nguyen Van Trung, Nguyen Thi Hoai, OTMC Contributors.
@@ -24,21 +24,9 @@ func main() {
 		return err
 	})
 
-	app.Post("/users", func(c *fiber.Ctx) error {
-		return handlers.CreateUser(FiberContext{Ctx: c})
-	})
-
-	app.Get("/users/:id", func(c *fiber.Ctx) error {
-		return handlers.GetUser(FiberContext{Ctx: c})
-	})
-
-	app.Put("/users/:id", func(c *fiber.Ctx) error {
-		return handlers.UpdateUser(FiberContext{Ctx: c})
-	})
-
-	app.Delete("/users/:id", func(c *fiber.Ctx) error {
-		return handlers.DeleteUser(FiberContext{Ctx: c})
-	})
-
+	app.Post("/users", handlers.CreateUser)
+	app.Get("/users/:id", handlers.GetUser)
+	app.Patch("/users/:id", handlers.UpdateUser)
+	app.Delete("/users/:id", handlers.DeleteUser)
 	log.Fatal(app.Listen(":3000"))
 }

@@ -69,13 +69,19 @@ func (s *UserService) Delete(ctx context.Context, id string) error {
 
 func Validates() func(r CreateUserRequest) error {
 	return func(r CreateUserRequest) error {
-		return rest.Validate().Required(r.Name).Email(r.Email).Validate()
+		return rest.Validate().
+			Required(r.Name).
+			Email(r.Email).
+			Validate()
 	}
 }
 
 func ValidatesUpdate() func(r UpdateUserRequest) error {
 	return func(r UpdateUserRequest) error {
-		return rest.Validate().Required(r.Name).Email(r.Email).Validate()
+		return rest.Validate().
+			Required(r.Name).
+			Email(r.Email).
+			Validate()
 	}
 }
 
