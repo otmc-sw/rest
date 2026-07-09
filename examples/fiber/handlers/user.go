@@ -8,13 +8,11 @@ package handlers
 import (
 	"github.com/gofiber/fiber/v2"
 	rest "github.com/otmc-sw/rest"
-	sqlc "github.com/otmc-sw/rest/examples/fiber/db/sqlc"
+	db "github.com/otmc-sw/rest/examples/fiber/db/sqlc"
 )
 
-type User struct {
-	ID       string
-	Username string
-	Email    string
+func init() {
+	rest.Debug()
 }
 
 type UserRequest struct {
@@ -23,7 +21,7 @@ type UserRequest struct {
 }
 
 type UserResponse struct {
-	ID       string `json:"id"`
+	ID       int64  `json:"id"`
 	Username string `json:"username"`
 	Email    string `json:"email"`
 }
@@ -37,11 +35,11 @@ func ValidateUser(r UserRequest) error {
 
 func CreateUser(c *fiber.Ctx) error {
 	return rest.
-		Create[UserRequest, User, UserResponse](FiberContext{Ctx: c}).
+		Create[UserRequest, db.User, UserResponse](FiberContext{Ctx: c}).
 		Bind().
 		Validate(ValidateUser).
 		Exec(func(ctx rest.Context, req UserRequest) error {
-			params := sqlc.CreateUserParams{
+			params := db.CreateUserParams{
 				Username: req.Email,
 				Email:    req.Email,
 			}
@@ -52,7 +50,7 @@ func CreateUser(c *fiber.Ctx) error {
 
 func GetUser(c *fiber.Ctx) error {
 	return rest.
-		Get[struct{}, User, UserResponse](FiberContext{Ctx: c}).
+		Get[struct{}, db.User, UserResponse](FiberContext{Ctx: c}).
 		ExecWithIDResult(func(ctx rest.Context, req struct{}, id int64) (any, error) {
 			return database.GetUser(ctx.Context(), id)
 		}).
@@ -61,8 +59,8 @@ func GetUser(c *fiber.Ctx) error {
 
 func GetAllUsers(c *fiber.Ctx) error {
 	return rest.
-		Get[struct{}, User, UserResponse](FiberContext{Ctx: c}).
-		ExecResult(func(ctx rest.Context, req struct{}) (any, error) {
+		Get[struct{}, []db.User, []UserResponse](FiberContext{Ctx: c}).
+		ExecResultTyped(func(ctx rest.Context, req struct{}) ([]db.User, error) {
 			return database.GetAllUsers(ctx.Context())
 		}).
 		Respond()
@@ -70,11 +68,11 @@ func GetAllUsers(c *fiber.Ctx) error {
 
 func UpdateUser(c *fiber.Ctx) error {
 	return rest.
-		Update[UserRequest, User, UserResponse](FiberContext{Ctx: c}).
+		Update[UserRequest, db.User, UserResponse](FiberContext{Ctx: c}).
 		Bind().
 		Validate(ValidateUser).
 		ExecWithID(func(ctx rest.Context, req UserRequest, id int64) error {
-			params := sqlc.UpdateUserParams{
+			params := db.UpdateUserParams{
 				Username: req.Email,
 				Email:    req.Email,
 				ID:       id,

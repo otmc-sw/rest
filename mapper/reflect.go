@@ -15,13 +15,13 @@ func copyStructFields(src, dst interface{}) {
 	srcVal := reflect.ValueOf(src)
 	dstVal := reflect.ValueOf(dst)
 
-	for srcVal.Kind() == reflect.Ptr {
+	for srcVal.Kind() == reflect.Ptr || srcVal.Kind() == reflect.Interface {
 		if srcVal.IsNil() {
 			return
 		}
 		srcVal = srcVal.Elem()
 	}
-	for dstVal.Kind() == reflect.Ptr {
+	for dstVal.Kind() == reflect.Ptr || dstVal.Kind() == reflect.Interface {
 		if dstVal.IsNil() {
 			return
 		}

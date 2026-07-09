@@ -7,6 +7,7 @@ package rest
 
 import (
 	"github.com/otmc-sw/rest/context"
+	"github.com/otmc-sw/rest/debugger"
 	"github.com/otmc-sw/rest/errors"
 	"github.com/otmc-sw/rest/mapper"
 	"github.com/otmc-sw/rest/pipeline"
@@ -49,4 +50,16 @@ func Validate() *validator.Validator {
 
 func NewError() *errors.Builder {
 	return errors.New()
+}
+
+func Debug() {
+	debugger.Enable()
+}
+
+func DebugComponent(component string) {
+	debugger.EnableComponent(component)
+}
+
+func DebugWithEnv() {
+	debugger.WithEnv()
 }

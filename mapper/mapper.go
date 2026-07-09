@@ -7,7 +7,11 @@ package mapper
 
 import (
 	"fmt"
+	"reflect"
 	"sync"
+	"time"
+
+	"github.com/otmc-sw/rest/debugger"
 )
 
 type MapperFunc[S any, D any] func(S) D
@@ -22,21 +26,32 @@ func Register[S any, D any](fn MapperFunc[S, D]) {
 	defer registryMu.Unlock()
 	key := typeKey[S]() + "->" + typeKey[D]()
 	registry[key] = fn
+	debugger.Mapper("Register[%s](%s)", typeKey[D](), typeKey[S]())
 }
 
 func Map[D any, S any](src S) D {
-	registryMu.RLock()
-	defer registryMu.RUnlock()
+	start := time.Now()
 	key := typeKey[S]() + "->" + typeKey[D]()
-	if fn, ok := registry[key]; ok {
+	debugger.Mapper("Map[%s](%s) start", typeKey[D](), typeKey[S]())
+
+	registryMu.RLock()
+	fn, ok := registry[key]
+	registryMu.RUnlock()
+
+	if ok {
 		if m, ok := fn.(func(S) D); ok {
-			return m(src)
+			result := m(src)
+			debugger.MapperWithDuration(typeKey[S](), typeKey[D](), time.Since(start))
+			return result
 		}
 	}
-	return Auto[D](src)
+	result := Auto[D](src)
+	debugger.MapperWithDuration(typeKey[S](), typeKey[D](), time.Since(start))
+	return result
 }
 
 func MapSlice[D any, S any](src []S) []D {
+	debugger.Mapper("MapSlice[%s](%s) count=%d", typeKey[D](), typeKey[S](), len(src))
 	dst := make([]D, 0, len(src))
 	for _, s := range src {
 		dst = append(dst, Map[D](s))
@@ -45,7 +60,24 @@ func MapSlice[D any, S any](src []S) []D {
 }
 
 func Auto[D any, S any](src S) D {
+	debugger.Mapper("Auto[%s](%s)", typeKey[D](), typeKey[S]())
 	var dst D
+
+	srcVal := reflect.ValueOf(src)
+	dstVal := reflect.ValueOf(&dst).Elem()
+
+	if srcVal.Kind() == reflect.Slice && dstVal.Kind() == reflect.Slice {
+		dstElemType := dstVal.Type().Elem()
+		result := reflect.MakeSlice(dstVal.Type(), srcVal.Len(), srcVal.Len())
+		for i := 0; i < srcVal.Len(); i++ {
+			elem := reflect.New(dstElemType).Interface()
+			copyStructFields(srcVal.Index(i).Interface(), elem)
+			result.Index(i).Set(reflect.ValueOf(elem).Elem())
+		}
+		dstVal.Set(result)
+		return dst
+	}
+
 	copyStructFields(&src, &dst)
 	return dst
 }
