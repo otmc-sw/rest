@@ -10,31 +10,6 @@ import (
 	"time"
 )
 
-type NullString struct {
-	String string
-	Valid  bool
-}
-
-type NullInt64 struct {
-	Int64 int64
-	Valid bool
-}
-
-type NullFloat64 struct {
-	Float64 float64
-	Valid   bool
-}
-
-type NullBool struct {
-	Bool  bool
-	Valid bool
-}
-
-type NullTime struct {
-	Time  time.Time
-	Valid bool
-}
-
 func String(s string) sql.NullString {
 	return sql.NullString{
 		String: s,

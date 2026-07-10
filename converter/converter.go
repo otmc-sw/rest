@@ -9,8 +9,6 @@ import (
 	"database/sql"
 	"strconv"
 	"time"
-
-	"github.com/otmc-sw/rest/nullable"
 )
 
 func Int64(s string) (int64, error) {
@@ -25,49 +23,49 @@ func Int64OrDefault(s string, defaultValue int64) int64 {
 	return i
 }
 
-func String(ns nullable.NullString) string {
+func String(ns sql.NullString) string {
 	if ns.Valid {
 		return ns.String
 	}
 	return ""
 }
 
-func StringPtr(ns nullable.NullString) *string {
+func StringPtr(ns sql.NullString) *string {
 	if ns.Valid {
 		return &ns.String
 	}
 	return nil
 }
 
-func Time(nt nullable.NullTime) time.Time {
+func Time(nt sql.NullTime) time.Time {
 	if nt.Valid {
 		return nt.Time
 	}
 	return time.Time{}
 }
 
-func TimeString(nt nullable.NullTime) string {
+func TimeString(nt sql.NullTime) string {
 	if nt.Valid {
 		return nt.Time.Format(time.RFC3339)
 	}
 	return ""
 }
 
-func Bool(nb nullable.NullBool) bool {
+func Bool(nb sql.NullBool) bool {
 	if nb.Valid {
 		return nb.Bool
 	}
 	return false
 }
 
-func Int64FromNull(ni nullable.NullInt64) int64 {
+func Int64FromNull(ni sql.NullInt64) int64 {
 	if ni.Valid {
 		return ni.Int64
 	}
 	return 0
 }
 
-func Float64FromNull(nf nullable.NullFloat64) float64 {
+func Float64FromNull(nf sql.NullFloat64) float64 {
 	if nf.Valid {
 		return nf.Float64
 	}
@@ -75,6 +73,18 @@ func Float64FromNull(nf nullable.NullFloat64) float64 {
 }
 
 func ToNullString(s string) sql.NullString {
+	return sql.NullString{String: s, Valid: s != ""}
+}
+
+func ToNullStringPtr(s *string) sql.NullString {
+	if s == nil {
+		return sql.NullString{Valid: false}
+	}
+	return sql.NullString{String: *s, Valid: true}
+}
+
+func ToNullBytes(b []byte) sql.NullString {
+	s := string(b)
 	return sql.NullString{String: s, Valid: s != ""}
 }
 
