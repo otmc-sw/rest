@@ -19,7 +19,7 @@ Content-Type: application/json
 
 
 ### Delete a user (valid)
-DELETE {{baseUrl}}/users/2
+DELETE {{baseUrl}}/users/3
 
 ### Create a user (missing username -> validation error)
 POST {{baseUrl}}/users

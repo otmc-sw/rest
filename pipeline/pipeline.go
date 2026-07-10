@@ -66,6 +66,7 @@ func (p *Pipeline[Req, Entity, Res]) Bind() *Pipeline[Req, Entity, Res] {
 	debugger.PipelineStep("Bind", "binding request")
 	if err := request.Bind(p.ctx, &req); err != nil {
 		debugger.Pipeline("Bind error: %v", err)
+		debugger.Error(debugger.ComponentPipeline, "Bind error: %v", err)
 		return &Pipeline[Req, Entity, Res]{ctx: p.ctx, bindErr: err, status: p.status}
 	}
 	debugger.Pipeline("Bind success: %+v", req)
@@ -79,6 +80,7 @@ func (p *Pipeline[Req, Entity, Res]) Validate(fn func(req Req) error) *Pipeline[
 	debugger.PipelineStep("Validate", "validating request")
 	if err := fn(*p.bound); err != nil {
 		debugger.Pipeline("Validate error: %v", err)
+		debugger.Error(debugger.ComponentPipeline, "Validate error: %v", err)
 		p.bindErr = err
 	} else {
 		debugger.Pipeline("Validate success")
@@ -116,6 +118,7 @@ func (p *Pipeline[Req, Entity, Res]) Handle(handler Handler[Req, Entity]) *Pipel
 	entity, err := handler(p.ctx, *p.bound, p.id)
 	if err != nil {
 		debugger.Pipeline("Handle error: %v", err)
+		debugger.Error(debugger.ComponentPipeline, "Handle error: %v", err)
 		p.bindErr = err
 		return p
 	}
@@ -137,6 +140,7 @@ func (p *Pipeline[Req, Entity, Res]) Exec(handler ExecHandler[Req]) *Pipeline[Re
 	result, err := handler(p.ctx, *p.bound, p.id)
 	if err != nil {
 		debugger.Pipeline("Exec error: %v", err)
+		debugger.Error(debugger.ComponentPipeline, "Exec error: %v", err)
 		p.bindErr = err
 		return p
 	}
@@ -156,6 +160,7 @@ func (p *Pipeline[Req, Entity, Res]) Respond() error {
 
 	if p.bindErr != nil {
 		debugger.Pipeline("Respond error: %v", p.bindErr)
+		debugger.Error(debugger.ComponentPipeline, "Respond error: %v", p.bindErr)
 		if appErr, ok := p.bindErr.(errors.Error); ok {
 			return errors.New().Skip(2).
 				Code(appErr.Details.Code).
@@ -174,6 +179,7 @@ func (p *Pipeline[Req, Entity, Res]) Respond() error {
 
 	if p.entity == nil {
 		debugger.Pipeline("Respond: no result produced")
+		debugger.Error(debugger.ComponentPipeline, "Respond: no result produced")
 		return errors.New().Skip(2).InternalError().Summary("no result produced").Send(p.ctx)
 	}
 

@@ -33,6 +33,7 @@ var (
 	enabled        bool
 	componentFlags = map[Component]bool{}
 	logger         = log.New(os.Stdout, "[REST] ", log.Lmicroseconds)
+	errorLogger    = log.New(os.Stderr, "[REST-ERROR] ", log.LstdFlags|log.Lmicroseconds)
 )
 
 func Enable() {
@@ -85,6 +86,15 @@ func IsComponentEnabled(component Component) bool {
 		return true
 	}
 	return componentFlags[component]
+}
+
+// Error logs a message to the console (stderr) regardless of whether debug
+// mode is enabled. It is intended for surfacing request processing failures so
+// that errors are always visible on the console even in production.
+func Error(component Component, format string, args ...interface{}) {
+	prefix := fmt.Sprintf("[%-8s] ", component)
+	msg := fmt.Sprintf(format, args...)
+	errorLogger.Output(2, prefix+msg)
 }
 
 func WithEnvFromString(value string) {
