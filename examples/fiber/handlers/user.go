@@ -48,9 +48,9 @@ func CreateUser(c *fiber.Ctx) error {
 		Exec(func(ctx rest.Context, req UserRequest, id any) (any, error) {
 			params := db.CreateUserParams{
 				Username: req.Username,
-				FullName: converter.ToNullString(req.FullName),
+				FullName: converter.StringOrDefault(req.FullName, "Trung Nguyen Van"),
 				Email:    req.Email,
-				Content:  converter.ToNullBytes(req.Content),
+				Content:  converter.BytesOrNull(req.Content),
 			}
 			return nil, database.CreateUser(ctx.Context(), params)
 		}).
@@ -84,7 +84,7 @@ func UpdateUser(c *fiber.Ctx) error {
 			params := db.UpdateUserParams{
 				Username: req.Username,
 				Email:    req.Email,
-				FullName: converter.ToNullString(req.FullName),
+				FullName: converter.StringOrNull(req.FullName),
 				ID:       id.(int64),
 			}
 			return nil, database.UpdateUser(ctx.Context(), params)

@@ -72,42 +72,104 @@ func Float64FromNull(nf sql.NullFloat64) float64 {
 	return 0
 }
 
-func ToNullString(s string) sql.NullString {
+func StringOrNull(s string) sql.NullString {
 	return sql.NullString{String: s, Valid: s != ""}
 }
 
-func ToNullStringPtr(s *string) sql.NullString {
+func StringPtrOrNull(s *string) sql.NullString {
 	if s == nil {
 		return sql.NullString{Valid: false}
 	}
 	return sql.NullString{String: *s, Valid: true}
 }
 
-func ToNullBytes(b []byte) sql.NullString {
+func BytesOrNull(b []byte) sql.NullString {
 	s := string(b)
 	return sql.NullString{String: s, Valid: s != ""}
 }
 
-func ToNullInt64(i int64) sql.NullInt64 {
+func Int64OrNull(i int64) sql.NullInt64 {
 	return sql.NullInt64{Int64: i, Valid: i != 0}
 }
 
-func ToNullInt64Ptr(i *int64) sql.NullInt64 {
+func Int64PtrOrNull(i *int64) sql.NullInt64 {
 	return sql.NullInt64{Int64: *i, Valid: i != nil}
 }
 
-func ToNullFloat64(f float64) sql.NullFloat64 {
+func Float64OrNull(f float64) sql.NullFloat64 {
 	return sql.NullFloat64{Float64: f, Valid: f != 0}
 }
 
-func ToNullFloat64Ptr(f *float64) sql.NullFloat64 {
+func Float64PtrOrNull(f *float64) sql.NullFloat64 {
 	return sql.NullFloat64{Float64: *f, Valid: f != nil}
 }
 
-func ToNullBool(b bool) sql.NullBool {
+func BoolOrNull(b bool) sql.NullBool {
 	return sql.NullBool{Bool: b, Valid: true}
 }
 
-func ToNullBoolPtr(b *bool) sql.NullBool {
+func BoolPtrOrNull(b *bool) sql.NullBool {
 	return sql.NullBool{Bool: *b, Valid: true}
 }
+
+func StringOrEmpty(s string) sql.NullString {
+	return sql.NullString{String: s, Valid: s != ""}
+}
+
+func StringPtrOrEmpty(s *string) sql.NullString {
+	if s == nil {
+		return sql.NullString{Valid: false}
+	}
+	return sql.NullString{String: *s, Valid: true}
+}
+
+func Float64PtrOrZero(f *float64) sql.NullFloat64 {
+	if f == nil {
+		return sql.NullFloat64{Valid: false}
+	}
+	return sql.NullFloat64{Float64: *f, Valid: true}
+}
+
+func Int64PtrOrZero(i *int64) sql.NullInt64 {
+	if i == nil {
+		return sql.NullInt64{Valid: false}
+	}
+	return sql.NullInt64{Int64: *i, Valid: true}
+}
+
+func StringOrDefault(s string, defaultValue string) sql.NullString {
+	if s == "" {
+		return sql.NullString{String: defaultValue, Valid: true}
+	}
+	return sql.NullString{String: s, Valid: true}
+}
+
+func Int64PtrOrDefault(i *int64, defaultValue int64) sql.NullInt64 {
+	if i == nil {
+		return sql.NullInt64{Int64: defaultValue, Valid: true}
+	}
+	return sql.NullInt64{Int64: *i, Valid: true}
+}
+
+func Float64PtrOrDefault(f *float64, defaultValue float64) sql.NullFloat64 {
+	if f == nil {
+		return sql.NullFloat64{Float64: defaultValue, Valid: true}
+	}
+	return sql.NullFloat64{Float64: *f, Valid: true}
+}
+
+func BoolPtrOrDefault(b *bool, defaultValue bool) sql.NullBool {
+	if b == nil {
+		return sql.NullBool{Bool: defaultValue, Valid: true}
+	}
+	return sql.NullBool{Bool: *b, Valid: true}
+}
+
+func TimeOrDefault(t time.Time, defaultValue time.Time) sql.NullTime {
+	if t.IsZero() {
+		return sql.NullTime{Time: defaultValue, Valid: true}
+	}
+	return sql.NullTime{Time: t, Valid: true}
+}
+
+
