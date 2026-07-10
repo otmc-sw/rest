@@ -105,9 +105,9 @@ func ToNullFloat64Ptr(f *float64) sql.NullFloat64 {
 }
 
 func ToNullBool(b bool) sql.NullBool {
-	return sql.NullBool{Bool: b, Valid: b}
+	return sql.NullBool{Bool: b, Valid: true}
 }
 
 func ToNullBoolPtr(b *bool) sql.NullBool {
-	return sql.NullBool{Bool: *b, Valid: b != nil}
+	return sql.NullBool{Bool: *b, Valid: true}
 }
