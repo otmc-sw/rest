@@ -12,9 +12,9 @@ POST {{baseUrl}}/users
 Content-Type: application/json
 
 {
-  "id": 2,
   "username": "trung",
-  "email": "trung@otmc.dev"
+  "full_name": "Trung Nguyen Van",
+  "email": "trung@otmc.com.vn"
 }
 
 

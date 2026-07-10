@@ -29,7 +29,7 @@ switch ($option) {
             Write-Host "Go build failed" -ForegroundColor Red
             exit 1
         }
-        & .\fiber-example.exe
+        & .\fiber.exe
     }
     "2" {
         Set-Location $TOP/examples/gin

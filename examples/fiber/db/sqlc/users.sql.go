@@ -7,19 +7,21 @@ package db
 
 import (
 	"context"
+	"database/sql"
 )
 
 const createUser = `-- name: CreateUser :exec
-INSERT INTO users (username, email) VALUES (?, ?)
+INSERT INTO users (username, full_name, email) VALUES (?, ?, ?)
 `
 
 type CreateUserParams struct {
-	Username string `json:"username"`
-	Email    string `json:"email"`
+	Username string         `json:"username"`
+	FullName sql.NullString `json:"full_name"`
+	Email    string         `json:"email"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
-	_, err := q.db.ExecContext(ctx, createUser, arg.Username, arg.Email)
+	_, err := q.db.ExecContext(ctx, createUser, arg.Username, arg.FullName, arg.Email)
 	return err
 }
 
@@ -33,7 +35,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 }
 
 const getAllUsers = `-- name: GetAllUsers :many
-SELECT id, username, email, created_at, updated_at FROM users
+SELECT id, username, full_name, email, created_at, updated_at FROM users
 `
 
 func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
@@ -48,6 +50,7 @@ func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
 		if err := rows.Scan(
 			&i.ID,
 			&i.Username,
+			&i.FullName,
 			&i.Email,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -66,7 +69,7 @@ func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, username, email, created_at, updated_at FROM users WHERE id = ?
+SELECT id, username, full_name, email, created_at, updated_at FROM users WHERE id = ?
 `
 
 func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
@@ -75,6 +78,7 @@ func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
 	err := row.Scan(
 		&i.ID,
 		&i.Username,
+		&i.FullName,
 		&i.Email,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -83,7 +87,7 @@ func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, username, email, created_at, updated_at FROM users
+SELECT id, username, full_name, email, created_at, updated_at FROM users
 `
 
 func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
@@ -98,6 +102,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 		if err := rows.Scan(
 			&i.ID,
 			&i.Username,
+			&i.FullName,
 			&i.Email,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -116,16 +121,22 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 }
 
 const updateUser = `-- name: UpdateUser :exec
-UPDATE users SET username = ?, email = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+UPDATE users SET username = ?, full_name = ?, email = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
 `
 
 type UpdateUserParams struct {
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	ID       int64  `json:"id"`
+	Username string         `json:"username"`
+	FullName sql.NullString `json:"full_name"`
+	Email    string         `json:"email"`
+	ID       int64          `json:"id"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
-	_, err := q.db.ExecContext(ctx, updateUser, arg.Username, arg.Email, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateUser,
+		arg.Username,
+		arg.FullName,
+		arg.Email,
+		arg.ID,
+	)
 	return err
 }

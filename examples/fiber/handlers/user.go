@@ -6,8 +6,11 @@
 package handlers
 
 import (
+	"encoding/json"
+
 	"github.com/gofiber/fiber/v2"
 	rest "github.com/otmc-sw/rest"
+	converter "github.com/otmc-sw/rest/converter"
 	db "github.com/otmc-sw/rest/examples/fiber/db/sqlc"
 )
 
@@ -16,14 +19,18 @@ func init() {
 }
 
 type UserRequest struct {
-	Username string
-	Email    string
+	Username string          `json:"username"`
+	FullName string          `json:"full_name,omitempty"`
+	Email    string          `json:"email"`
+	Content  json.RawMessage `json:"content,omitempty"`
 }
 
 type UserResponse struct {
-	ID       int64  `json:"id"`
-	Username string `json:"username"`
-	Email    string `json:"email"`
+	ID       int64       `json:"id"`
+	Username string      `json:"username"`
+	FullName string      `json:"full_name,omitempty"`
+	Email    string      `json:"email"`
+	Content  interface{} `json:"content,omitempty"`
 }
 
 func ValidateUser(r UserRequest) error {
@@ -40,7 +47,8 @@ func CreateUser(c *fiber.Ctx) error {
 		Validate(ValidateUser).
 		Exec(func(ctx rest.Context, req UserRequest, id any) (any, error) {
 			params := db.CreateUserParams{
-				Username: req.Email,
+				Username: req.Username,
+				FullName: converter.ToNullString(req.FullName),
 				Email:    req.Email,
 			}
 			return nil, database.CreateUser(ctx.Context(), params)
@@ -73,8 +81,9 @@ func UpdateUser(c *fiber.Ctx) error {
 		Validate(ValidateUser).
 		Exec(func(ctx rest.Context, req UserRequest, id any) (any, error) {
 			params := db.UpdateUserParams{
-				Username: req.Email,
+				Username: req.Username,
 				Email:    req.Email,
+				FullName: converter.ToNullString(req.FullName),
 				ID:       id.(int64),
 			}
 			return nil, database.UpdateUser(ctx.Context(), params)
