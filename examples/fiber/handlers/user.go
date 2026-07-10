@@ -50,6 +50,7 @@ func CreateUser(c *fiber.Ctx) error {
 				Username: req.Username,
 				FullName: converter.ToNullString(req.FullName),
 				Email:    req.Email,
+				Content:  converter.ToNullBytes(req.Content),
 			}
 			return nil, database.CreateUser(ctx.Context(), params)
 		}).

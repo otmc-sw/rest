@@ -13,6 +13,7 @@ type User struct {
 	Username  string         `json:"username"`
 	FullName  sql.NullString `json:"full_name"`
 	Email     string         `json:"email"`
+	Content   sql.NullString `json:"content"`
 	CreatedAt sql.NullTime   `json:"created_at"`
 	UpdatedAt sql.NullTime   `json:"updated_at"`
 }

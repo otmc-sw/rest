@@ -14,7 +14,8 @@ Content-Type: application/json
 {
   "username": "trung",
   "full_name": "Trung Nguyen Van",
-  "email": "trung@otmc.com.vn"
+  "email": "trung@otmc.com.vn",
+  "content": "{\"key\": \"value\"}"
 }
 
 

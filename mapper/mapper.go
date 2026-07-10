@@ -66,6 +66,13 @@ func Auto[D any, S any](src S) D {
 	srcVal := reflect.ValueOf(src)
 	dstVal := reflect.ValueOf(&dst).Elem()
 
+	for srcVal.Kind() == reflect.Ptr || srcVal.Kind() == reflect.Interface {
+		if srcVal.IsNil() {
+			return dst
+		}
+		srcVal = srcVal.Elem()
+	}
+
 	if srcVal.Kind() == reflect.Slice && dstVal.Kind() == reflect.Slice {
 		dstElemType := dstVal.Type().Elem()
 		result := reflect.MakeSlice(dstVal.Type(), srcVal.Len(), srcVal.Len())
@@ -78,7 +85,13 @@ func Auto[D any, S any](src S) D {
 		return dst
 	}
 
-	copyStructFields(&src, &dst)
+	var srcPtr interface{}
+	if srcVal.CanAddr() {
+		srcPtr = srcVal.Addr().Interface()
+	} else {
+		srcPtr = &src
+	}
+	copyStructFields(srcPtr, &dst)
 	return dst
 }
 
