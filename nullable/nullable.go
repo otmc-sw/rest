@@ -5,7 +5,10 @@
 **/
 package nullable
 
-import "time"
+import (
+	"database/sql"
+	"time"
+)
 
 type NullString struct {
 	String string
@@ -32,93 +35,93 @@ type NullTime struct {
 	Valid bool
 }
 
-func String(s string) NullString {
-	return NullString{
+func String(s string) sql.NullString {
+	return sql.NullString{
 		String: s,
 		Valid:  s != "",
 	}
 }
 
-func StringPtr(s *string) NullString {
+func StringPtr(s *string) sql.NullString {
 	if s == nil {
-		return NullString{Valid: false}
+		return sql.NullString{Valid: false}
 	}
-	return NullString{
+	return sql.NullString{
 		String: *s,
 		Valid:  true,
 	}
 }
 
-func Int64(i int64) NullInt64 {
-	return NullInt64{
+func Int64(i int64) sql.NullInt64 {
+	return sql.NullInt64{
 		Int64: i,
 		Valid: i != 0,
 	}
 }
 
-func Int64Ptr(i *int64) NullInt64 {
+func Int64Ptr(i *int64) sql.NullInt64 {
 	if i == nil {
-		return NullInt64{Valid: false}
+		return sql.NullInt64{Valid: false}
 	}
-	return NullInt64{
+	return sql.NullInt64{
 		Int64: *i,
 		Valid: true,
 	}
 }
 
-func Float64(f float64) NullFloat64 {
-	return NullFloat64{
+func Float64(f float64) sql.NullFloat64 {
+	return sql.NullFloat64{
 		Float64: f,
 		Valid:   f != 0,
 	}
 }
 
-func Float64Ptr(f *float64) NullFloat64 {
+func Float64Ptr(f *float64) sql.NullFloat64 {
 	if f == nil {
-		return NullFloat64{Valid: false}
+		return sql.NullFloat64{Valid: false}
 	}
-	return NullFloat64{
+	return sql.NullFloat64{
 		Float64: *f,
 		Valid:   true,
 	}
 }
 
-func Bool(b bool) NullBool {
-	return NullBool{
+func Bool(b bool) sql.NullBool {
+	return sql.NullBool{
 		Bool:  b,
 		Valid: b,
 	}
 }
 
-func BoolPtr(b *bool) NullBool {
+func BoolPtr(b *bool) sql.NullBool {
 	if b == nil {
-		return NullBool{Valid: false}
+		return sql.NullBool{Valid: false}
 	}
-	return NullBool{
+	return sql.NullBool{
 		Bool:  *b,
 		Valid: true,
 	}
 }
 
-func Time(t time.Time) NullTime {
-	return NullTime{
+func Time(t time.Time) sql.NullTime {
+	return sql.NullTime{
 		Time:  t,
 		Valid: !t.IsZero(),
 	}
 }
 
-func TimePtr(t *time.Time) NullTime {
+func TimePtr(t *time.Time) sql.NullTime {
 	if t == nil {
-		return NullTime{Valid: false}
+		return sql.NullTime{Valid: false}
 	}
-	return NullTime{
+	return sql.NullTime{
 		Time:  *t,
 		Valid: !t.IsZero(),
 	}
 }
 
 type StringBuilder struct {
-	value NullString
+	value sql.NullString
 }
 
 func NewStringBuilder(s string) *StringBuilder {
@@ -127,9 +130,9 @@ func NewStringBuilder(s string) *StringBuilder {
 	}
 }
 
-func (b *StringBuilder) Default(defaultValue string) NullString {
+func (b *StringBuilder) Default(defaultValue string) sql.NullString {
 	if !b.value.Valid {
-		return NullString{
+		return sql.NullString{
 			String: defaultValue,
 			Valid:  true,
 		}

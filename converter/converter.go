@@ -6,6 +6,7 @@
 package converter
 
 import (
+	"database/sql"
 	"strconv"
 	"time"
 
@@ -73,30 +74,30 @@ func Float64FromNull(nf nullable.NullFloat64) float64 {
 	return 0
 }
 
-func ToNullString(s string) nullable.NullString {
-	return nullable.String(s)
+func ToNullString(s string) sql.NullString {
+	return sql.NullString{String: s, Valid: s != ""}
 }
 
-func ToNullInt64(i int64) nullable.NullInt64 {
-	return nullable.Int64(i)
+func ToNullInt64(i int64) sql.NullInt64 {
+	return sql.NullInt64{Int64: i, Valid: i != 0}
 }
 
-func ToNullInt64Ptr(i *int64) nullable.NullInt64 {
-	return nullable.Int64Ptr(i)
+func ToNullInt64Ptr(i *int64) sql.NullInt64 {
+	return sql.NullInt64{Int64: *i, Valid: i != nil}
 }
 
-func ToNullFloat64(f float64) nullable.NullFloat64 {
-	return nullable.Float64(f)
+func ToNullFloat64(f float64) sql.NullFloat64 {
+	return sql.NullFloat64{Float64: f, Valid: f != 0}
 }
 
-func ToNullFloat64Ptr(f *float64) nullable.NullFloat64 {
-	return nullable.Float64Ptr(f)
+func ToNullFloat64Ptr(f *float64) sql.NullFloat64 {
+	return sql.NullFloat64{Float64: *f, Valid: f != nil}
 }
 
-func ToNullBool(b bool) nullable.NullBool {
-	return nullable.Bool(b)
+func ToNullBool(b bool) sql.NullBool {
+	return sql.NullBool{Bool: b, Valid: b}
 }
 
-func ToNullBoolPtr(b *bool) nullable.NullBool {
-	return nullable.BoolPtr(b)
+func ToNullBoolPtr(b *bool) sql.NullBool {
+	return sql.NullBool{Bool: *b, Valid: b != nil}
 }
