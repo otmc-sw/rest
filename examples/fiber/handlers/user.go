@@ -14,9 +14,6 @@ import (
 	db "github.com/otmc-sw/rest/examples/fiber/db/sqlc"
 )
 
-// func init() {
-// 	rest.Debug()
-// }
 
 type UserRequest struct {
 	Username string          `json:"username"`

@@ -88,9 +88,6 @@ func IsComponentEnabled(component Component) bool {
 	return componentFlags[component]
 }
 
-// Error logs a message to the console (stderr) regardless of whether debug
-// mode is enabled. It is intended for surfacing request processing failures so
-// that errors are always visible on the console even in production.
 func Error(component Component, format string, args ...interface{}) {
 	prefix := fmt.Sprintf("[%-8s] ", component)
 	msg := fmt.Sprintf(format, args...)

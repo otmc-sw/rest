@@ -50,8 +50,84 @@ func NewError() *errors.Builder {
 	return errors.New()
 }
 
-func Debug() {
-	debugger.Enable()
+func BadRequest(summary string, err error) error {
+	return errors.New().
+		BadRequest().
+		Skip(1).
+		Summary(summary).
+		Detail(err.Error()).
+		Build()
+}
+
+func Unauthorized(summary string, err error) error {
+	return errors.New().
+		Unauthorized().
+		Skip(1).
+		Summary(summary).
+		Detail(err.Error()).
+		Build()
+}
+
+func Forbidden(summary string, err error) error {
+	return errors.New().
+		Forbidden().
+		Skip(1).
+		Summary(summary).
+		Detail(err.Error()).
+		Build()
+}
+
+func NotFound(summary string, err error) error {
+	return errors.New().
+		NotFound().
+		Skip(1).
+		Summary(summary).
+		Detail(err.Error()).
+		Build()
+}
+
+func Conflict(summary string, err error) error {
+	return errors.New().
+		Conflict().
+		Skip(1).
+		Summary(summary).
+		Detail(err.Error()).
+		Build()
+}
+
+func UnprocessableEntity(summary string, err error) error {
+	return errors.New().
+		UnprocessableEntity().
+		Skip(1).
+		Summary(summary).
+		Detail(err.Error()).
+		Build()
+}
+
+func InternalError(summary string, err error) error {
+	return errors.New().
+		InternalError().
+		Skip(1).
+		Summary(summary).
+		Detail(err.Error()).
+		Build()
+}
+
+func ServiceUnavailable(summary string, err error) error {
+	return errors.New().
+		ServiceUnavailable().
+		Skip(1).
+		Summary(summary).
+		Detail(err.Error()).
+		Build()
+}
+
+func Debug(enable ...bool) {
+	if len(enable) > 0 && enable[0] {
+		debugger.Enable()
+	} else {
+		debugger.Disable()
+	}
 }
 
 func DebugComponent(component string) {

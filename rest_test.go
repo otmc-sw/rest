@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @License Apache License 2.0
  * @Copyright (c) 2026 OTMC Softwares. OTMC Golang REST.
  * @Contributors Nguyen Van Trung, Nguyen Thi Hoai, OTMC Contributors.
@@ -17,7 +17,6 @@ import (
 	restcontext "github.com/otmc-sw/rest/context"
 )
 
-// fakeContext implements restcontext.Context for testing the rest package.
 type fakeContext struct {
 	ctx    stdc.Context
 	params map[string]string
@@ -158,7 +157,6 @@ func TestGetPipelineEndToEnd(t *testing.T) {
 
 	resp, ok := fc.wrote.(map[string]interface{})
 	if !ok {
-		// response is wrapped in success envelope; marshal to verify
 		if data, _ := json.Marshal(fc.wrote); string(data) == "" {
 			t.Fatalf("expected a written body, got empty")
 		}
@@ -191,7 +189,6 @@ func TestDeletePipelineEndToEnd(t *testing.T) {
 }
 
 func TestRegisterAndMap(t *testing.T) {
-	// Register a custom mapper from DocEntity -> DocResponse.
 	Register(func(e DocEntity) DocResponse {
 		return DocResponse{ID: e.ID, Title: e.Title}
 	})
@@ -225,13 +222,11 @@ func TestValidate(t *testing.T) {
 		t.Fatal("Validate returned nil")
 	}
 
-	// No validation errors expected.
 	v.Required("value").Min("hello", 3).Email("a@b.com")
 	if v.HasErrors() {
 		t.Fatalf("expected no validation errors, got: %v", v.Errors())
 	}
 
-	// Validation errors expected.
 	v2 := Validate()
 	v2.Required("").Email("not-an-email")
 	if !v2.HasErrors() {
@@ -264,7 +259,6 @@ func TestNewError(t *testing.T) {
 }
 
 func TestNewErrorSendWithoutContext(t *testing.T) {
-	// Send with nil context should not panic and should return an error.
 	b := NewError().InternalError().Summary("boom")
 	err := b.Send(nil)
 	if err == nil {
@@ -273,15 +267,12 @@ func TestNewErrorSendWithoutContext(t *testing.T) {
 }
 
 func TestDebugFunctions(t *testing.T) {
-	// These should not panic.
 	Debug()
 	DebugComponent("mapper")
 	DebugComponent("all")
 
-	// WithEnv reads REST_DEBUG; ensure it does not panic.
 	t.Setenv("REST_DEBUG", "pipeline,validator")
 	DebugWithEnv()
 
-	// Reset debugger state so other tests are unaffected.
 	os.Unsetenv("REST_DEBUG")
 }
