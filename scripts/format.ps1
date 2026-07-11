@@ -22,6 +22,7 @@ $IgnoredDirs   = @(
 )
 $Whitelist     = @(
     "Apache License",
+    "OTMC Softwares",
     "Copyright",
     "Contributors:",
     "TODO: ",
