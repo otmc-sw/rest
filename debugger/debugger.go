@@ -92,7 +92,7 @@ func IsComponentEnabled(component Component) bool {
 }
 
 func Error(component Component, format string, args ...interface{}) {
-	prefix := fmt.Sprintf("[%-8s] ", component)
+	prefix := fmt.Sprintf("[%-8s] ERROR ", component)
 	msg := fmt.Sprintf(format, args...)
 	errorLogger.Output(2, RED+prefix+msg+RESET)
 }
@@ -120,7 +120,7 @@ func logDebug(component Component, format string, args ...interface{}) {
 	if !IsComponentEnabled(component) && component != ComponentAll {
 		return
 	}
-	prefix := fmt.Sprintf("[%-8s] ", component)
+	prefix := fmt.Sprintf("[%-8s] DEBUG ", component)
 	msg := fmt.Sprintf(format, args...)
 	logger.Output(3, prefix+msg)
 }
