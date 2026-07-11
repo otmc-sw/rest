@@ -11,6 +11,7 @@ import (
 	"github.com/otmc-sw/rest/errors"
 	"github.com/otmc-sw/rest/mapper"
 	"github.com/otmc-sw/rest/pipeline"
+	"github.com/otmc-sw/rest/response"
 	"github.com/otmc-sw/rest/validator"
 )
 
@@ -48,6 +49,10 @@ func Validate() *validator.Validator {
 
 func NewError() *errors.Builder {
 	return errors.New()
+}
+
+func OK(ctx Context) *response.Builder[any] {
+	return response.OK[any](ctx)
 }
 
 func BadRequest(summary string, err error) error {

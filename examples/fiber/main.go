@@ -22,7 +22,7 @@ func main() {
 		logger.Crit("Failed to connect to database: %v", err)
 	}
 
-	handlers.SetDatabase(db.Queries)
+	handlers.New(db.Queries)
 
 	app := fiber.New()
 
@@ -38,6 +38,8 @@ func main() {
 	app.Get("/users/:id", handlers.GetUser)
 	app.Patch("/users/:id", handlers.UpdateUser)
 	app.Delete("/users/:id", handlers.DeleteUser)
+
+	app.Get("/test", handlers.TestResponse)
 
 	logger.Info("Server started on :3000")
 	log.Fatal(app.Listen(":3000"))

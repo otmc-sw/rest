@@ -14,7 +14,6 @@ import (
 	db "github.com/otmc-sw/rest/examples/fiber/db/sqlc"
 )
 
-
 type UserRequest struct {
 	Username string          `json:"username"`
 	FullName string          `json:"full_name,omitempty"`
@@ -96,4 +95,12 @@ func DeleteUser(c *fiber.Ctx) error {
 			return nil, database.DeleteUser(ctx.Context(), id.(int64))
 		}).
 		Respond()
+}
+
+func TestResponse(c *fiber.Ctx) error {
+	data := map[string]any{
+		"status":    "success",
+		"test_data": "Hello World",
+	}
+	return rest.OK(FiberContext{Ctx: c}).Data(data).Message("OK").Send()
 }

@@ -1,5 +1,8 @@
 @baseUrl = http://localhost:3000
 
+### Test endpoint
+GET {{baseUrl}}/test
+
 ### Get all users
 GET {{baseUrl}}/users
 

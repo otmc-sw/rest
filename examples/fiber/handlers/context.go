@@ -11,6 +11,7 @@ import (
 	"io"
 
 	"github.com/gofiber/fiber/v2"
+	rest "github.com/otmc-sw/rest"
 	sqlc "github.com/otmc-sw/rest/examples/fiber/db/sqlc"
 )
 
@@ -18,9 +19,13 @@ type FiberContext struct {
 	*fiber.Ctx
 }
 
+func init() {
+	rest.Debug(true)
+}
+
 var database *sqlc.Queries
 
-func SetDatabase(db *sqlc.Queries) {
+func New(db *sqlc.Queries) {
 	database = db
 }
 
