@@ -10,8 +10,9 @@ import (
 	"database/sql"
 )
 
-const createUser = `-- name: CreateUser :exec
+const createUser = `-- name: CreateUser :one
 INSERT INTO users (username, full_name, email, content) VALUES (?, ?, ?, ?)
+RETURNING id, username, full_name, email, content, created_at, updated_at
 `
 
 type CreateUserParams struct {
@@ -21,14 +22,24 @@ type CreateUserParams struct {
 	Content  sql.NullString `json:"content"`
 }
 
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
-	_, err := q.db.ExecContext(ctx, createUser,
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, createUser,
 		arg.Username,
 		arg.FullName,
 		arg.Email,
 		arg.Content,
 	)
-	return err
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.FullName,
+		&i.Email,
+		&i.Content,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const deleteUser = `-- name: DeleteUser :exec

@@ -49,7 +49,7 @@ func CreateUser(c *fiber.Ctx) error {
 				Email:    req.Email,
 				Content:  converter.BytesOrNull(req.Content),
 			}
-			return nil, database.CreateUser(ctx.Context(), params)
+			return database.CreateUser(ctx.Context(), params)
 		}).
 		Respond()
 }
