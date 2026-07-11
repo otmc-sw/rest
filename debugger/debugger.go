@@ -28,12 +28,15 @@ const (
 	ComponentAll       Component = "all"
 )
 
+const RED = "\033[31m"
+const RESET = "\033[0m"
+
 var (
 	mu             sync.RWMutex
 	enabled        bool
 	componentFlags = map[Component]bool{}
 	logger         = log.New(os.Stdout, "[REST] ", log.Lmicroseconds)
-	errorLogger    = log.New(os.Stderr, "[REST-ERROR] ", log.LstdFlags|log.Lmicroseconds)
+	errorLogger    = log.New(os.Stderr, "[REST] ", log.Lmicroseconds)
 )
 
 func Enable() {
@@ -91,7 +94,7 @@ func IsComponentEnabled(component Component) bool {
 func Error(component Component, format string, args ...interface{}) {
 	prefix := fmt.Sprintf("[%-8s] ", component)
 	msg := fmt.Sprintf(format, args...)
-	errorLogger.Output(2, prefix+msg)
+	errorLogger.Output(2, RED+prefix+msg+RESET)
 }
 
 func WithEnvFromString(value string) {

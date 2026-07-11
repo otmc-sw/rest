@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/otmc-sw/rest/context"
+	"github.com/otmc-sw/rest/debugger"
 )
 
 type ErrorDetails struct {
@@ -173,6 +174,8 @@ func (b *Builder) Send(ctx context.Context) error {
 	if ctx == nil {
 		return err.Err()
 	}
+	debugger.Error(debugger.ComponentPipeline, "🌿 Summary: %s", err.Details.Summary)
+	debugger.Error(debugger.ComponentPipeline, "📝 Caller : %s:%d -> %s()", err.Details.File, err.Details.Line, err.Details.Function)
 	return ctx.JSON(err.Details.Code, err)
 }
 

@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	ErrValidation = errors.New("validation failed")
+	ErrValidation = errors.New("Validation Failed")
 )
 
 type Validator struct {

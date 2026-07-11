@@ -79,8 +79,6 @@ func (p *Pipeline[Req, Entity, Res]) Validate(fn func(req Req) error) *Pipeline[
 	}
 	debugger.PipelineStep("Validate", "validating request")
 	if err := fn(*p.bound); err != nil {
-		debugger.Pipeline("Validate error: %v", err)
-		debugger.Error(debugger.ComponentPipeline, "Validate error: %v", err)
 		p.bindErr = err
 	} else {
 		debugger.Pipeline("Validate success")
@@ -159,16 +157,15 @@ func (p *Pipeline[Req, Entity, Res]) Respond() error {
 	debugger.PipelineStep("Respond", "preparing response (status=%d)", p.status)
 
 	if p.bindErr != nil {
-		debugger.Pipeline("Respond error: %v", p.bindErr)
-		debugger.Error(debugger.ComponentPipeline, "Respond error: %v", p.bindErr)
+		debugger.Error(debugger.ComponentPipeline, "📚 Reason : %v", p.bindErr)
 		if appErr, ok := p.bindErr.(errors.Error); ok {
 			return errors.New().Skip(2).
 				Code(appErr.Details.Code).
-				Summary("request failed").
+				Summary("Request Failed").
 				Detail(p.bindErr).
 				Send(p.ctx)
 		}
-		return errors.New().Skip(2).BadRequest().Summary("request failed").Detail(p.bindErr).Send(p.ctx)
+		return errors.New().Skip(2).BadRequest().Summary("Request Failed").Detail(p.bindErr).Send(p.ctx)
 	}
 
 	if p.entityFn != nil {
