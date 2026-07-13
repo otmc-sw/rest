@@ -49,7 +49,7 @@ func Register[Src any, Dst any](fn func(Src) Dst) {
 	mapper.Register(fn)
 }
 
-func Validate() *validator.Validator {
+func Validator() *validator.Validator {
 	return validator.New()
 }
 

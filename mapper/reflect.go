@@ -62,15 +62,12 @@ func convertAndSet(dstField, srcField reflect.Value) error {
 	srcType := srcField.Type()
 	dstType := dstField.Type()
 
-	// Handle pointer types: dereference to underlying value
 	if srcType.Kind() == reflect.Ptr {
 		if srcField.IsNil() {
-			// *string -> string: set to zero value
 			if dstType.Kind() == reflect.String {
 				dstField.SetString("")
 				return nil
 			}
-			// *string -> sql.NullString: set to invalid
 			if dstType == nullStringType {
 				dstField.Set(reflect.ValueOf(sql.NullString{Valid: false}))
 				return nil
@@ -80,7 +77,6 @@ func convertAndSet(dstField, srcField reflect.Value) error {
 		elem := srcField.Elem()
 		elemType := elem.Type()
 
-		// *json.RawMessage -> string (serialize JSON bytes to string)
 		if elemType == jsonRawMessageType {
 			raw := elem.Interface().(json.RawMessage)
 			if dstType.Kind() == reflect.String {
@@ -94,20 +90,17 @@ func convertAndSet(dstField, srcField reflect.Value) error {
 			}
 		}
 
-		// *string -> string
 		if elemType.Kind() == reflect.String && dstType.Kind() == reflect.String {
 			dstField.SetString(elem.String())
 			return nil
 		}
 
-		// *string -> sql.NullString
 		if elemType.Kind() == reflect.String && dstType == nullStringType {
 			s := elem.String()
 			dstField.Set(reflect.ValueOf(sql.NullString{String: s, Valid: s != ""}))
 			return nil
 		}
 
-		// Generic: try to convert the underlying value
 		srcField = elem
 		srcType = elemType
 	}

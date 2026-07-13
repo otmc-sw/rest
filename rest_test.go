@@ -217,7 +217,7 @@ func TestRegisterAndMap(t *testing.T) {
 }
 
 func TestValidate(t *testing.T) {
-	v := Validate()
+	v := Validator()
 	if v == nil {
 		t.Fatal("Validate returned nil")
 	}
@@ -227,13 +227,13 @@ func TestValidate(t *testing.T) {
 		t.Fatalf("expected no validation errors, got: %v", v.Errors())
 	}
 
-	v2 := Validate()
+	v2 := Validator()
 	v2.Required("").Email("not-an-email")
 	if !v2.HasErrors() {
 		t.Fatal("expected validation errors, got none")
 	}
-	if err := v2.Validate(); err == nil {
-		t.Fatal("expected Validate() to return an error")
+	if err := v2.Process(); err == nil {
+		t.Fatal("expected Process() to return an error")
 	}
 }
 

@@ -2,247 +2,289 @@
  * @License Apache License 2.0
  * @Copyright (c) 2026 OTMC Softwares. OTMC Golang REST.
  * @Contributors Nguyen Van Trung, Nguyen Thi Hoai, OTMC Contributors.
-**/
+ **/
 package validator
 
 import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 	"unicode"
 )
 
 var (
-	ErrValidation = errors.New("Validation Failed")
+	ErrValidation = errors.New("validation failed")
+
+	reEmail      = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	reURL        = regexp.MustCompile(`^https?://[^\s/$.?#].[^\s]*$`)
+	reNumeric    = regexp.MustCompile(`^[0-9]+$`)
+	reAlpha      = regexp.MustCompile(`^[a-zA-Z]+$`)
+	reAlphaNum   = regexp.MustCompile(`^[a-zA-Z0-9]+$`)
+	specialChars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
 )
 
 type Validator struct {
 	errors []error
+	field  string // field name hiện tại cho error message
 }
 
 func New() *Validator {
-	return &Validator{
-		errors: make([]error, 0),
+	return &Validator{errors: make([]error, 0)}
+}
+
+func (v *Validator) Field(name string) *Validator {
+	v.field = name
+	return v
+}
+
+func (v *Validator) addErr(msg string) {
+	if v.field != "" {
+		msg = fmt.Sprintf("%s: %s", v.field, msg)
+	}
+	v.errors = append(v.errors, errors.New(msg))
+}
+
+
+func derefString(val any) (string, bool) {
+	switch s := val.(type) {
+	case string:
+		return s, true
+	case *string:
+		if s == nil {
+			return "", false
+		}
+		return *s, true
+	default:
+		return "", false
 	}
 }
 
-func (v *Validator) Required(value interface{}) *Validator {
+func derefInt(val any) (int64, bool) {
+	switch n := val.(type) {
+	case int:
+		return int64(n), true
+	case *int:
+		if n == nil {
+			return 0, false
+		}
+		return int64(*n), true
+	case int64:
+		return n, true
+	case *int64:
+		if n == nil {
+			return 0, false
+		}
+		return *n, true
+	default:
+		return 0, false
+	}
+}
+
+func matchRegex(val any, re *regexp.Regexp, errMsg string, v *Validator) *Validator {
+	s, ok := derefString(val)
+	if !ok {
+		return v
+	}
+	if !re.MatchString(s) {
+		v.addErr(errMsg)
+	}
+	return v
+}
+
+func checkStringFn(val any, fn func(string) bool, errMsg string, v *Validator) *Validator {
+	s, ok := derefString(val)
+	if !ok {
+		return v
+	}
+	if !fn(s) {
+		v.addErr(errMsg)
+	}
+	return v
+}
+
+
+func (v *Validator) Required(value any) *Validator {
+	var empty bool
 	switch val := value.(type) {
 	case string:
-		if val == "" {
-			v.errors = append(v.errors, errors.New("field is required"))
-		}
+		empty = strings.TrimSpace(val) == ""
 	case *string:
-		if val == nil || *val == "" {
-			v.errors = append(v.errors, errors.New("field is required"))
-		}
+		empty = val == nil || strings.TrimSpace(*val) == ""
 	case int:
-		if val == 0 {
-			v.errors = append(v.errors, errors.New("field is required"))
-		}
+		empty = val == 0
 	case *int:
-		if val == nil || *val == 0 {
-			v.errors = append(v.errors, errors.New("field is required"))
-		}
+		empty = val == nil || *val == 0
 	case int64:
-		if val == 0 {
-			v.errors = append(v.errors, errors.New("field is required"))
-		}
+		empty = val == 0
 	case *int64:
-		if val == nil || *val == 0 {
-			v.errors = append(v.errors, errors.New("field is required"))
-		}
-	case []interface{}:
-		if len(val) == 0 {
-			v.errors = append(v.errors, errors.New("field is required"))
-		}
+		empty = val == nil || *val == 0
+	case []any:
+		empty = len(val) == 0
 	default:
-		if value == nil {
-			v.errors = append(v.errors, errors.New("field is required"))
-		}
+		empty = value == nil
+	}
+	if empty {
+		v.addErr("is required")
 	}
 	return v
 }
 
-func (v *Validator) Min(value string, min int) *Validator {
-	if len(value) < min {
-		v.errors = append(v.errors, fmt.Errorf("must be at least %d characters", min))
-	}
-	return v
+func (v *Validator) Min(value any, min int) *Validator {
+	return checkStringFn(value, func(s string) bool { return len(s) >= min },
+		fmt.Sprintf("must be at least %d characters", min), v)
 }
 
-func (v *Validator) Max(value string, max int) *Validator {
-	if len(value) > max {
-		v.errors = append(v.errors, fmt.Errorf("must be at most %d characters", max))
-	}
-	return v
+func (v *Validator) Max(value any, max int) *Validator {
+	return checkStringFn(value, func(s string) bool { return len(s) <= max },
+		fmt.Sprintf("must be at most %d characters", max), v)
 }
 
-func (v *Validator) Between(value string, min, max int) *Validator {
-	if len(value) < min || len(value) > max {
-		v.errors = append(v.errors, fmt.Errorf("must be between %d and %d characters", min, max))
-	}
-	return v
+func (v *Validator) Between(value any, min, max int) *Validator {
+	return checkStringFn(value, func(s string) bool { return len(s) >= min && len(s) <= max },
+		fmt.Sprintf("must be between %d and %d characters", min, max), v)
 }
 
-func (v *Validator) Email(value string) *Validator {
-	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
-	if !emailRegex.MatchString(value) {
-		v.errors = append(v.errors, errors.New("must be a valid email"))
-	}
-	return v
+func (v *Validator) Email(value any) *Validator {
+	return matchRegex(value, reEmail, "must be a valid email", v)
 }
 
-func (v *Validator) URL(value string) *Validator {
-	urlRegex := regexp.MustCompile(`^https?://[^\s/$.?#].[^\s]*$`)
-	if !urlRegex.MatchString(value) {
-		v.errors = append(v.errors, errors.New("must be a valid URL"))
-	}
-	return v
+func (v *Validator) URL(value any) *Validator {
+	return matchRegex(value, reURL, "must be a valid URL", v)
 }
 
-func (v *Validator) Numeric(value string) *Validator {
-	numericRegex := regexp.MustCompile(`^[0-9]+$`)
-	if !numericRegex.MatchString(value) {
-		v.errors = append(v.errors, errors.New("must be numeric"))
-	}
-	return v
+func (v *Validator) Numeric(value any) *Validator {
+	return matchRegex(value, reNumeric, "must be numeric", v)
 }
 
-func (v *Validator) Alpha(value string) *Validator {
-	alphaRegex := regexp.MustCompile(`^[a-zA-Z]+$`)
-	if !alphaRegex.MatchString(value) {
-		v.errors = append(v.errors, errors.New("must contain only letters"))
-	}
-	return v
+func (v *Validator) Alpha(value any) *Validator {
+	return matchRegex(value, reAlpha, "must contain only letters", v)
 }
 
-func (v *Validator) AlphaNumeric(value string) *Validator {
-	alphaNumRegex := regexp.MustCompile(`^[a-zA-Z0-9]+$`)
-	if !alphaNumRegex.MatchString(value) {
-		v.errors = append(v.errors, errors.New("must contain only letters and numbers"))
-	}
-	return v
+func (v *Validator) AlphaNumeric(value any) *Validator {
+	return matchRegex(value, reAlphaNum, "must contain only letters and numbers", v)
 }
 
-func (v *Validator) Match(value, pattern string) *Validator {
-	matched, err := regexp.MatchString(pattern, value)
+func (v *Validator) Match(value any, pattern string) *Validator {
+	s, ok := derefString(value)
+	if !ok {
+		return v
+	}
+	matched, err := regexp.MatchString(pattern, s)
 	if err != nil || !matched {
-		v.errors = append(v.errors, errors.New("format is invalid"))
+		v.addErr("format is invalid")
 	}
 	return v
 }
 
-func (v *Validator) Equals(value, expected string) *Validator {
-	if value != expected {
-		v.errors = append(v.errors, errors.New("values do not match"))
-	}
-	return v
+func (v *Validator) Equals(value any, expected string) *Validator {
+	return checkStringFn(value, func(s string) bool { return s == expected },
+		"values do not match", v)
 }
 
-func (v *Validator) OneOf(value string, allowed []string) *Validator {
+func (v *Validator) OneOf(value any, allowed []string) *Validator {
+	s, ok := derefString(value)
+	if !ok {
+		return v
+	}
 	for _, a := range allowed {
-		if value == a {
+		if s == a {
 			return v
 		}
 	}
-	v.errors = append(v.errors, fmt.Errorf("must be one of: %v", allowed))
+	v.addErr(fmt.Sprintf("must be one of: %v", allowed))
 	return v
 }
 
-func (v *Validator) MinInt(value, min int64) *Validator {
-	if value < min {
-		v.errors = append(v.errors, fmt.Errorf("must be at least %d", min))
-	}
-	return v
-}
 
-func (v *Validator) MaxInt(value, max int64) *Validator {
-	if value > max {
-		v.errors = append(v.errors, fmt.Errorf("must be at most %d", max))
-	}
-	return v
-}
-
-func (v *Validator) Positive(value int64) *Validator {
-	if value <= 0 {
-		v.errors = append(v.errors, errors.New("must be positive"))
-	}
-	return v
-}
-
-func (v *Validator) Negative(value int64) *Validator {
-	if value >= 0 {
-		v.errors = append(v.errors, errors.New("must be negative"))
-	}
-	return v
-}
-
-func (v *Validator) HasUpperCase(value string) *Validator {
-	hasUpper := false
-	for _, r := range value {
-		if unicode.IsUpper(r) {
-			hasUpper = true
-			break
-		}
-	}
-	if !hasUpper {
-		v.errors = append(v.errors, errors.New("must contain at least one uppercase letter"))
-	}
-	return v
-}
-
-func (v *Validator) HasLowerCase(value string) *Validator {
-	hasLower := false
-	for _, r := range value {
-		if unicode.IsLower(r) {
-			hasLower = true
-			break
-		}
-	}
-	if !hasLower {
-		v.errors = append(v.errors, errors.New("must contain at least one lowercase letter"))
-	}
-	return v
-}
-
-func (v *Validator) HasDigit(value string) *Validator {
-	hasDigit := false
-	for _, r := range value {
-		if unicode.IsDigit(r) {
-			hasDigit = true
-			break
-		}
-	}
-	if !hasDigit {
-		v.errors = append(v.errors, errors.New("must contain at least one digit"))
-	}
-	return v
-}
-
-func (v *Validator) HasSpecialChar(value string) *Validator {
-	specialChars := "!@#$%^&*()_+-=[]{}|;:,.<>?"
-	hasSpecial := false
-	for _, r := range value {
-		for _, c := range specialChars {
-			if r == c {
-				hasSpecial = true
-				break
+func (v *Validator) HasUpperCase(value any) *Validator {
+	return checkStringFn(value, func(s string) bool {
+		for _, r := range s {
+			if unicode.IsUpper(r) {
+				return true
 			}
 		}
-		if hasSpecial {
-			break
+		return false
+	}, "must contain at least one uppercase letter", v)
+}
+
+func (v *Validator) HasLowerCase(value any) *Validator {
+	return checkStringFn(value, func(s string) bool {
+		for _, r := range s {
+			if unicode.IsLower(r) {
+				return true
+			}
 		}
+		return false
+	}, "must contain at least one lowercase letter", v)
+}
+
+func (v *Validator) HasDigit(value any) *Validator {
+	return checkStringFn(value, func(s string) bool {
+		for _, r := range s {
+			if unicode.IsDigit(r) {
+				return true
+			}
+		}
+		return false
+	}, "must contain at least one digit", v)
+}
+
+func (v *Validator) HasSpecialChar(value any) *Validator {
+	return checkStringFn(value, func(s string) bool {
+		return strings.ContainsAny(s, specialChars)
+	}, "must contain at least one special character", v)
+}
+
+
+func (v *Validator) MinInt(value any, min int64) *Validator {
+	n, ok := derefInt(value)
+	if !ok {
+		return v
 	}
-	if !hasSpecial {
-		v.errors = append(v.errors, errors.New("must contain at least one special character"))
+	if n < min {
+		v.addErr(fmt.Sprintf("must be at least %d", min))
 	}
 	return v
 }
+
+func (v *Validator) MaxInt(value any, max int64) *Validator {
+	n, ok := derefInt(value)
+	if !ok {
+		return v
+	}
+	if n > max {
+		v.addErr(fmt.Sprintf("must be at most %d", max))
+	}
+	return v
+}
+
+func (v *Validator) Positive(value any) *Validator {
+	n, ok := derefInt(value)
+	if !ok {
+		return v
+	}
+	if n <= 0 {
+		v.addErr("must be positive")
+	}
+	return v
+}
+
+func (v *Validator) Negative(value any) *Validator {
+	n, ok := derefInt(value)
+	if !ok {
+		return v
+	}
+	if n >= 0 {
+		v.addErr("must be negative")
+	}
+	return v
+}
+
 
 func (v *Validator) Custom(fn func() error) *Validator {
 	if err := fn(); err != nil {
-		v.errors = append(v.errors, err)
+		v.addErr(err.Error())
 	}
 	return v
 }
@@ -254,10 +296,7 @@ func (v *Validator) Validate() error {
 	return nil
 }
 
-func (v *Validator) HasErrors() bool {
-	return len(v.errors) > 0
-}
+func (v *Validator) Process() error { return v.Validate() }
 
-func (v *Validator) Errors() []error {
-	return v.errors
-}
+func (v *Validator) HasErrors() bool { return len(v.errors) > 0 }
+func (v *Validator) Errors() []error { return v.errors }

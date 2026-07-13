@@ -29,10 +29,10 @@ type UserResponse struct {
 }
 
 func ValidateUser(r UserRequest) error {
-	return rest.Validate().
-		Required(*r.Username).
-		Email(*r.Email).
-		Validate()
+	return rest.Validator().
+		Required(r.Username).
+		Email(r.Email).
+		Process()
 }
 
 func CreateUser(c *fiber.Ctx) error {
@@ -68,7 +68,6 @@ func UpdateUser(c *fiber.Ctx) error {
 	return rest.
 		Update[UserRequest, db.UpdateUserParams, db.User, UserResponse](FiberContext{Ctx: c}).
 		Bind().
-		Validate(ValidateUser).
 		Exec(func(ctx rest.Context, req UserRequest, params db.UpdateUserParams, id any) (any, error) {
 			return nil, database.UpdateUser(ctx.Context(), params)
 		}).

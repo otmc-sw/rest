@@ -129,7 +129,7 @@ func BindWithValidation(ctx context.Context, v interface{}, validateFn func(*val
 	}
 	vld := validator.New()
 	validateFn(vld)
-	return vld.Validate()
+	return vld.Process()
 }
 
 func String(ctx context.Context) (string, error) {
