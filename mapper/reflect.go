@@ -179,7 +179,8 @@ func convertNullTypes(dstField, srcField reflect.Value) error {
 			}
 		}
 	case dstType == nullInt64Type && (srcType.Kind() == reflect.Int64 || srcType.Kind() == reflect.Int):
-		dstField.Set(reflect.ValueOf(sql.NullInt64{Int64: srcField.Int(), Valid: true}))
+		v := srcField.Int()
+		dstField.Set(reflect.ValueOf(sql.NullInt64{Int64: v, Valid: v != 0}))
 	case srcType == nullFloat64Type && dstType.Kind() == reflect.Float64:
 		nf := srcField.Interface().(sql.NullFloat64)
 		if nf.Valid {
