@@ -35,6 +35,10 @@ func Update[Req any, Entity any, Res any](ctx Context) *Pipeline[Req, Entity, Re
 	return pipeline.Update[Req, Entity, Res](ctx)
 }
 
+func Patch[Req any, Params any, Entity any, Res any](ctx Context) *pipeline.PatchPipeline[Req, Params, Entity, Res] {
+	return pipeline.Patch[Req, Params, Entity, Res](ctx)
+}
+
 func Delete[Res any](ctx Context) *Pipeline[struct{}, struct{}, Res] {
 	return pipeline.Delete[Res](ctx)
 }

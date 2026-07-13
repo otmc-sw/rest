@@ -20,6 +20,13 @@ Content-Type: application/json
   "content": "{\"key\": \"value\"}"
 }
 
+### Update a user (valid)
+PATCH {{baseUrl}}/users/1
+Content-Type: application/json
+
+{
+  "email": "trung_updated@otmc.com.vn"
+}
 
 ### Delete a user (valid)
 DELETE {{baseUrl}}/users/3

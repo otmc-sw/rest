@@ -88,6 +88,16 @@ func UpdateUser(c *fiber.Ctx) error {
 		Respond()
 }
 
+func PatchUser(c *fiber.Ctx) error {
+	return rest.
+		Patch[UserRequest, db.UpdateUserParams, db.User, UserResponse](FiberContext{Ctx: c}).
+		Bind().
+		Exec(func(ctx rest.Context, req UserRequest, params db.UpdateUserParams, id any) (any, error) {
+			return nil, database.UpdateUser(ctx.Context(), params)
+		}).
+		Respond()
+}
+
 func DeleteUser(c *fiber.Ctx) error {
 	return rest.
 		Delete[UserResponse](FiberContext{Ctx: c}).
