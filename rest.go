@@ -17,39 +17,30 @@ import (
 
 type Context = context.Context
 
-// Handler dùng chung cho Create/Update đơn giản (không tách Params)
 type Handler[Req any, Entity any] = pipeline.Handler[Req, Entity]
 
-// ExecHandler dùng cho các thao tác xử lý nghiệp vụ trả về any
 type ExecHandler[Req any] = pipeline.ExecHandler[Req]
 
-// PatchHandler dùng cho trường hợp cần tách biệt Request DTO và Params DTO
 type PatchHandler[Req any, Params any] = pipeline.PatchHandler[Req, Params]
 
-// Pipeline giờ đây là alias của Pipeline - thống nhất cho mọi operation
 type Pipeline[Req any, Params any, Entity any, Res any] = pipeline.Pipeline[Req, Params, Entity, Res]
 
-// Create khởi tạo pipeline với status 201
 func Create[Req any, Params any, Entity any, Res any](ctx Context) *Pipeline[Req, Params, Entity, Res] {
 	return pipeline.Create[Req, Params, Entity, Res](ctx)
 }
 
-// Get khởi tạo pipeline với status 200
 func Get[Req any, Params any, Entity any, Res any](ctx Context) *Pipeline[Req, Params, Entity, Res] {
 	return pipeline.Get[Req, Params, Entity, Res](ctx)
 }
 
-// Update khởi tạo pipeline với status 200
 func Update[Req any, Params any, Entity any, Res any](ctx Context) *Pipeline[Req, Params, Entity, Res] {
 	return pipeline.Update[Req, Params, Entity, Res](ctx)
 }
 
-// Patch khởi tạo pipeline với status 200
 func Patch[Req any, Params any, Entity any, Res any](ctx Context) *Pipeline[Req, Params, Entity, Res] {
 	return pipeline.Patch[Req, Params, Entity, Res](ctx)
 }
 
-// Delete khởi tạo pipeline với status 204
 func Delete[Req any, Params any, Entity any, Res any](ctx Context) *Pipeline[Req, Params, Entity, Res] {
 	return pipeline.Delete[Req, Params, Entity, Res](ctx)
 }

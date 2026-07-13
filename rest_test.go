@@ -70,7 +70,6 @@ type DocResponse struct {
 	Title string `json:"title"`
 }
 
-// ✅ Updated: Added Params type parameter (struct{})
 func TestCreatePipeline(t *testing.T) {
 	p := Create[CreateDocRequest, struct{}, DocEntity, DocResponse](newFakeContext())
 	if p == nil {
@@ -78,7 +77,6 @@ func TestCreatePipeline(t *testing.T) {
 	}
 }
 
-// ✅ Updated: Added Params type parameter (struct{})
 func TestGetPipeline(t *testing.T) {
 	p := Get[CreateDocRequest, struct{}, DocEntity, DocResponse](newFakeContext())
 	if p == nil {
@@ -86,7 +84,6 @@ func TestGetPipeline(t *testing.T) {
 	}
 }
 
-// ✅ Updated: Added Params type parameter (struct{})
 func TestUpdatePipeline(t *testing.T) {
 	p := Update[CreateDocRequest, struct{}, DocEntity, DocResponse](newFakeContext())
 	if p == nil {
@@ -94,7 +91,6 @@ func TestUpdatePipeline(t *testing.T) {
 	}
 }
 
-// ✅ Updated: Delete now requires 4 type parameters
 func TestDeletePipeline(t *testing.T) {
 	p := Delete[struct{}, struct{}, struct{}, DocResponse](newFakeContext())
 	if p == nil {
@@ -112,7 +108,6 @@ func TestCreatePipelineEndToEnd(t *testing.T) {
 		return DocEntity{ID: "42", Title: req.Title}, nil
 	}
 
-	// ✅ Updated: 4 type params
 	err := Create[CreateDocRequest, struct{}, DocEntity, DocResponse](fc).
 		Param("id").
 		Bind().
@@ -147,7 +142,6 @@ func TestGetPipelineEndToEnd(t *testing.T) {
 		return DocEntity{ID: "7", Title: "Fetched"}, nil
 	}
 
-	// ✅ Updated: 4 type params
 	err := Get[CreateDocRequest, struct{}, DocEntity, DocResponse](fc).
 		Param("id").
 		Bind().
@@ -176,12 +170,10 @@ func TestDeletePipelineEndToEnd(t *testing.T) {
 	fc.body = []byte("{}")
 	fc.params["id"] = "99"
 
-	// ✅ Updated: Handler signature matches unified pipeline
 	handle := func(ctx Context, req struct{}, id any) (struct{}, error) {
 		return struct{}{}, nil
 	}
 
-	// ✅ Updated: 4 type params for Delete
 	err := Delete[struct{}, struct{}, struct{}, DocResponse](fc).
 		Param("id").
 		Bind().
@@ -209,7 +201,6 @@ func TestRegisterAndMap(t *testing.T) {
 		return DocEntity{ID: "55", Title: req.Title}, nil
 	}
 
-	// ✅ Updated: 4 type params
 	err := Create[CreateDocRequest, struct{}, DocEntity, DocResponse](fc).
 		Param("id").
 		Bind().

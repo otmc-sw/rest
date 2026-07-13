@@ -17,16 +17,12 @@ import (
 	"github.com/otmc-sw/rest/validator"
 )
 
-// Handler dùng chung cho Create/Update khi không cần tách biệt Params
 type Handler[Req any, Entity any] func(ctx context.Context, req Req, id any) (Entity, error)
 
-// ExecHandler dùng chung cho các thao tác xử lý nghiệp vụ trả về any
 type ExecHandler[Req any] func(ctx context.Context, req Req, id any) (any, error)
 
-// PatchHandler dùng cho trường hợp cần tách biệt Request DTO và Params DTO
 type PatchHandler[Req any, Params any] func(ctx context.Context, req Req, params Params, id any) (any, error)
 
-// Pipeline là pipeline duy nhất dùng chung cho Create, Update, Patch
 type Pipeline[Req any, Params any, Entity any, Res any] struct {
 	ctx      context.Context
 	id       any // string or int64
@@ -43,38 +39,31 @@ func newPipeline[Req any, Params any, Entity any, Res any](ctx context.Context, 
 	return &Pipeline[Req, Params, Entity, Res]{ctx: ctx, status: status}
 }
 
-// Create khởi tạo pipeline với status 201.
-// Nếu không cần Params riêng biệt, hãy set Params = Req hoặc struct{}
 func Create[Req any, Params any, Entity any, Res any](ctx context.Context) *Pipeline[Req, Params, Entity, Res] {
 	debugger.Pipeline("Create[%T, %T] start", *new(Req), *new(Entity))
 	return newPipeline[Req, Params, Entity, Res](ctx, 201)
 }
 
-// Get vẫn giữ nguyên nếu bạn còn dùng, hoặc có thể chuyển sang Pipeline tương tự
 func Get[Req any, Params any, Entity any, Res any](ctx context.Context) *Pipeline[Req, Params, Entity, Res] {
 	debugger.Pipeline("Get[%T, %T] start", *new(Req), *new(Entity))
 	return newPipeline[Req, Params, Entity, Res](ctx, 200)
 }
 
-// Update khởi tạo pipeline với status 200
 func Update[Req any, Params any, Entity any, Res any](ctx context.Context) *Pipeline[Req, Params, Entity, Res] {
 	debugger.Pipeline("Update[%T, %T] start", *new(Req), *new(Entity))
 	return newPipeline[Req, Params, Entity, Res](ctx, 200)
 }
 
-// Delete khởi tạo pipeline với status 204
 func Delete[Req any, Params any, Entity any, Res any](ctx context.Context) *Pipeline[Req, Params, Entity, Res] {
 	debugger.Pipeline("Delete start")
 	return newPipeline[Req, Params, Entity, Res](ctx, 204)
 }
 
-// Patch khởi tạo pipeline với status 200
 func Patch[Req any, Params any, Entity any, Res any](ctx context.Context) *Pipeline[Req, Params, Entity, Res] {
 	debugger.Pipeline("Patch[%T, %T, %T] start", *new(Req), *new(Params), *new(Entity))
 	return newPipeline[Req, Params, Entity, Res](ctx, 200)
 }
 
-// Param lấy ID từ URL path parameter
 func (p *Pipeline[Req, Params, Entity, Res]) Param(key string) *Pipeline[Req, Params, Entity, Res] {
 	p.id = request.Param(p.ctx, key)
 	debugger.PipelineStep("Param", "key=%s value=%v", key, p.id)
@@ -106,7 +95,6 @@ func (p *Pipeline[Req, Params, Entity, Res]) Validate(fn func(req Req) error) *P
 	return p
 }
 
-// Params xây dựng đối tượng Params từ Request (dành riêng cho Patch/Update phức tạp)
 func (p *Pipeline[Req, Params, Entity, Res]) Params(fn func(req Req) Params) *Pipeline[Req, Params, Entity, Res] {
 	if p.bindErr != nil || p.bound == nil {
 		return p
@@ -118,7 +106,6 @@ func (p *Pipeline[Req, Params, Entity, Res]) Params(fn func(req Req) Params) *Pi
 	return p
 }
 
-// Handle hỗ trợ handler signature cũ (không có params) để tương thích ngược với Create/Update đơn giản
 func (p *Pipeline[Req, Params, Entity, Res]) Handle(handler Handler[Req, Entity]) *Pipeline[Req, Params, Entity, Res] {
 	if p.bindErr != nil || p.bound == nil {
 		return p
@@ -137,7 +124,6 @@ func (p *Pipeline[Req, Params, Entity, Res]) Handle(handler Handler[Req, Entity]
 	return p
 }
 
-// Exec hỗ trợ handler signature đầy đủ (có params)
 func (p *Pipeline[Req, Params, Entity, Res]) Exec(handler PatchHandler[Req, Params]) *Pipeline[Req, Params, Entity, Res] {
 	if p.bindErr != nil {
 		return p
@@ -160,8 +146,6 @@ func (p *Pipeline[Req, Params, Entity, Res]) Exec(handler PatchHandler[Req, Para
 		entity := mapper.Map[Entity](result)
 		p.entity = &entity
 	} else {
-		// Fallback: Ưu tiên map từ params nếu có, ngược lại map từ bound request
-		// Điều này giúp Create (thường không có params) vẫn hoạt động đúng
 		var entity Entity
 		if p.paramsFn != nil {
 			entity = mapper.Map[Entity](p.params)

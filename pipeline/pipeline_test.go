@@ -74,7 +74,7 @@ func TestPipelineEndToEnd(t *testing.T) {
 		return DocEntity{ID: "42", Title: req.Title}, nil
 	}
 
-	err := Create[CreateDocRequest, DocEntity, DocResponse](fc).
+	err := Create[CreateDocRequest, CreateDocRequest, DocEntity, DocResponse](fc).
 		Param("id").
 		Bind().
 		Validate(func(r CreateDocRequest) error {
