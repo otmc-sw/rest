@@ -62,6 +62,56 @@ func convertAndSet(dstField, srcField reflect.Value) error {
 	srcType := srcField.Type()
 	dstType := dstField.Type()
 
+	// Handle pointer types: dereference to underlying value
+	if srcType.Kind() == reflect.Ptr {
+		if srcField.IsNil() {
+			// *string -> string: set to zero value
+			if dstType.Kind() == reflect.String {
+				dstField.SetString("")
+				return nil
+			}
+			// *string -> sql.NullString: set to invalid
+			if dstType == nullStringType {
+				dstField.Set(reflect.ValueOf(sql.NullString{Valid: false}))
+				return nil
+			}
+			return nil
+		}
+		elem := srcField.Elem()
+		elemType := elem.Type()
+
+		// *json.RawMessage -> string (serialize JSON bytes to string)
+		if elemType == jsonRawMessageType {
+			raw := elem.Interface().(json.RawMessage)
+			if dstType.Kind() == reflect.String {
+				dstField.SetString(string(raw))
+				return nil
+			}
+			if dstType == nullStringType {
+				s := string(raw)
+				dstField.Set(reflect.ValueOf(sql.NullString{String: s, Valid: true}))
+				return nil
+			}
+		}
+
+		// *string -> string
+		if elemType.Kind() == reflect.String && dstType.Kind() == reflect.String {
+			dstField.SetString(elem.String())
+			return nil
+		}
+
+		// *string -> sql.NullString
+		if elemType.Kind() == reflect.String && dstType == nullStringType {
+			s := elem.String()
+			dstField.Set(reflect.ValueOf(sql.NullString{String: s, Valid: s != ""}))
+			return nil
+		}
+
+		// Generic: try to convert the underlying value
+		srcField = elem
+		srcType = elemType
+	}
+
 	if srcType.Kind() == reflect.Int64 && dstType.Kind() == reflect.String {
 		dstField.SetString(strconv.FormatInt(srcField.Int(), 10))
 		return nil
@@ -189,13 +239,14 @@ func convertNullTypes(dstField, srcField reflect.Value) error {
 }
 
 var (
-	nullStringType  = reflect.TypeOf(sql.NullString{})
-	nullInt64Type   = reflect.TypeOf(sql.NullInt64{})
-	nullFloat64Type = reflect.TypeOf(sql.NullFloat64{})
-	nullBoolType    = reflect.TypeOf(sql.NullBool{})
-	nullTimeType    = reflect.TypeOf(sql.NullTime{})
-	timeTimeType    = reflect.TypeOf(time.Time{})
-	interfaceType   = reflect.TypeOf((*interface{})(nil)).Elem()
+	nullStringType     = reflect.TypeOf(sql.NullString{})
+	nullInt64Type      = reflect.TypeOf(sql.NullInt64{})
+	nullFloat64Type    = reflect.TypeOf(sql.NullFloat64{})
+	nullBoolType       = reflect.TypeOf(sql.NullBool{})
+	nullTimeType       = reflect.TypeOf(sql.NullTime{})
+	timeTimeType       = reflect.TypeOf(time.Time{})
+	interfaceType      = reflect.TypeOf((*interface{})(nil)).Elem()
+	jsonRawMessageType = reflect.TypeOf(json.RawMessage{})
 )
 
 func isNullType(t reflect.Type) bool {

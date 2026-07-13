@@ -133,6 +133,11 @@ func (p *Pipeline[Req, Params, Entity, Res]) Exec(handler PatchHandler[Req, Para
 		p.bound = &req
 	}
 	p.ensureID()
+	// Auto-convert Req -> Params if Params() was not explicitly called
+	if p.paramsFn == nil {
+		p.params = mapper.Map[Params](*p.bound)
+		debugger.PipelineStep("Exec", "auto-converted Req->Params: %+v", p.params)
+	}
 	debugger.PipelineStep("Exec", "executing handler")
 	result, err := handler(p.ctx, *p.bound, p.params, p.id)
 	if err != nil {
