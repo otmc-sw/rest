@@ -26,7 +26,7 @@ var (
 
 type Validator struct {
 	errors []error
-	field  string // field name hiện tại cho error message
+	field  string
 }
 
 func New() *Validator {
@@ -44,7 +44,6 @@ func (v *Validator) addErr(msg string) {
 	}
 	v.errors = append(v.errors, errors.New(msg))
 }
-
 
 func derefString(val any) (string, bool) {
 	switch s := val.(type) {
@@ -103,7 +102,6 @@ func checkStringFn(val any, fn func(string) bool, errMsg string, v *Validator) *
 	return v
 }
 
-
 func (v *Validator) Required(value any) *Validator {
 	var empty bool
 	switch val := value.(type) {
@@ -125,7 +123,7 @@ func (v *Validator) Required(value any) *Validator {
 		empty = value == nil
 	}
 	if empty {
-		v.addErr("is required")
+		v.addErr("field is required")
 	}
 	return v
 }
@@ -196,7 +194,6 @@ func (v *Validator) OneOf(value any, allowed []string) *Validator {
 	return v
 }
 
-
 func (v *Validator) HasUpperCase(value any) *Validator {
 	return checkStringFn(value, func(s string) bool {
 		for _, r := range s {
@@ -235,7 +232,6 @@ func (v *Validator) HasSpecialChar(value any) *Validator {
 		return strings.ContainsAny(s, specialChars)
 	}, "must contain at least one special character", v)
 }
-
 
 func (v *Validator) MinInt(value any, min int64) *Validator {
 	n, ok := derefInt(value)
@@ -280,7 +276,6 @@ func (v *Validator) Negative(value any) *Validator {
 	}
 	return v
 }
-
 
 func (v *Validator) Custom(fn func() error) *Validator {
 	if err := fn(); err != nil {
