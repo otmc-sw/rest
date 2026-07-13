@@ -8,8 +8,16 @@ SELECT id, username, full_name, email, content, created_at, updated_at FROM user
 -- name: GetAllUsers :many
 SELECT id, username, full_name, email, content, created_at, updated_at FROM users;
 
--- name: UpdateUser :exec
-UPDATE users SET username = ?, full_name = ?, email = ?, content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;
+-- name: UpdateUser :one
+UPDATE users
+SET
+    username = COALESCE(sqlc.narg(username), username),
+    full_name = COALESCE(sqlc.narg(full_name), full_name),
+    email = COALESCE(sqlc.narg(email), email),
+    content = COALESCE(sqlc.narg(content), content),
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = sqlc.arg(id)
+RETURNING *;
 
 -- name: DeleteUser :exec
 DELETE FROM users WHERE id = ?;

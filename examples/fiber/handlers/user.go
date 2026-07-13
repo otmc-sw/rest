@@ -69,7 +69,7 @@ func UpdateUser(c *fiber.Ctx) error {
 		Update[UserRequest, db.UpdateUserParams, db.User, UserResponse](FiberContext{Ctx: c}).
 		Bind().
 		Exec(func(ctx rest.Context, req UserRequest, params db.UpdateUserParams, id any) (any, error) {
-			return nil, database.UpdateUser(ctx.Context(), params)
+			return database.UpdateUser(ctx.Context(), params)
 		}).
 		Respond()
 }
@@ -79,7 +79,7 @@ func PatchUser(c *fiber.Ctx) error {
 		Patch[UserRequest, db.UpdateUserParams, db.User, UserResponse](FiberContext{Ctx: c}).
 		Bind().
 		Exec(func(ctx rest.Context, req UserRequest, params db.UpdateUserParams, id any) (any, error) {
-			return nil, database.UpdateUser(ctx.Context(), params)
+			return database.UpdateUser(ctx.Context(), params)
 		}).
 		Respond()
 }

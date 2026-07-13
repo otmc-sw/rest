@@ -147,6 +147,8 @@ func (p *Pipeline[Req, Params, Entity, Res]) Exec(h PatchHandler[Req, Params]) *
 		debugger.PipelineStep("Exec", "auto-mapped Req→Params: %+v", p.params)
 	}
 
+	mapper.SetField(&p.params, "ID", p.id)
+
 	debugger.PipelineStep("Exec", "executing")
 	result, err := h(p.ctx, *p.bound, p.params, p.id)
 	if err != nil {

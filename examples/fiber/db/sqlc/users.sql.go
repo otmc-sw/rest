@@ -140,25 +140,43 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 	return items, nil
 }
 
-const updateUser = `-- name: UpdateUser :exec
-UPDATE users SET username = ?, full_name = ?, email = ?, content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+const updateUser = `-- name: UpdateUser :one
+UPDATE users
+SET
+    username = COALESCE(?1, username),
+    full_name = COALESCE(?2, full_name),
+    email = COALESCE(?3, email),
+    content = COALESCE(?4, content),
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = ?5
+RETURNING id, username, full_name, email, content, created_at, updated_at
 `
 
 type UpdateUserParams struct {
-	Username string         `json:"username"`
+	Username sql.NullString `json:"username"`
 	FullName sql.NullString `json:"full_name"`
-	Email    string         `json:"email"`
+	Email    sql.NullString `json:"email"`
 	Content  sql.NullString `json:"content"`
 	ID       int64          `json:"id"`
 }
 
-func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
-	_, err := q.db.ExecContext(ctx, updateUser,
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, updateUser,
 		arg.Username,
 		arg.FullName,
 		arg.Email,
 		arg.Content,
 		arg.ID,
 	)
-	return err
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.FullName,
+		&i.Email,
+		&i.Content,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

@@ -95,6 +95,43 @@ func Auto[D any, S any](src S) D {
 	return dst
 }
 
+func SetField[T any](dst *T, fieldName string, value any) {
+	dstVal := reflect.ValueOf(dst)
+	if dstVal.Kind() != reflect.Ptr || dstVal.IsNil() {
+		return
+	}
+	elem := dstVal.Elem()
+	if elem.Kind() != reflect.Struct {
+		return
+	}
+	field := elem.FieldByName(fieldName)
+	if !field.IsValid() || !field.CanSet() {
+		return
+	}
+	fieldVal := reflect.ValueOf(value)
+	if fieldVal.Type().AssignableTo(field.Type()) {
+		field.Set(fieldVal)
+	} else if field.Kind() == reflect.Int64 {
+		switch v := value.(type) {
+		case int64:
+			field.SetInt(v)
+		case int:
+			field.SetInt(int64(v))
+		case float64:
+			field.SetInt(int64(v))
+		}
+	} else if field.Kind() == reflect.Int {
+		switch v := value.(type) {
+		case int64:
+			field.SetInt(v)
+		case int:
+			field.SetInt(int64(v))
+		case float64:
+			field.SetInt(int64(v))
+		}
+	}
+}
+
 func typeKey[T any]() string {
 	var t T
 	return fmt.Sprintf("%T", t)
