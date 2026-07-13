@@ -70,29 +70,33 @@ type DocResponse struct {
 	Title string `json:"title"`
 }
 
+// ✅ Updated: Added Params type parameter (struct{})
 func TestCreatePipeline(t *testing.T) {
-	p := Create[CreateDocRequest, DocEntity, DocResponse](newFakeContext())
+	p := Create[CreateDocRequest, struct{}, DocEntity, DocResponse](newFakeContext())
 	if p == nil {
 		t.Fatal("Create returned nil pipeline")
 	}
 }
 
+// ✅ Updated: Added Params type parameter (struct{})
 func TestGetPipeline(t *testing.T) {
-	p := Get[CreateDocRequest, DocEntity, DocResponse](newFakeContext())
+	p := Get[CreateDocRequest, struct{}, DocEntity, DocResponse](newFakeContext())
 	if p == nil {
 		t.Fatal("Get returned nil pipeline")
 	}
 }
 
+// ✅ Updated: Added Params type parameter (struct{})
 func TestUpdatePipeline(t *testing.T) {
-	p := Update[CreateDocRequest, DocEntity, DocResponse](newFakeContext())
+	p := Update[CreateDocRequest, struct{}, DocEntity, DocResponse](newFakeContext())
 	if p == nil {
 		t.Fatal("Update returned nil pipeline")
 	}
 }
 
+// ✅ Updated: Delete now requires 4 type parameters
 func TestDeletePipeline(t *testing.T) {
-	p := Delete[DocResponse](newFakeContext())
+	p := Delete[struct{}, struct{}, struct{}, DocResponse](newFakeContext())
 	if p == nil {
 		t.Fatal("Delete returned nil pipeline")
 	}
@@ -108,7 +112,8 @@ func TestCreatePipelineEndToEnd(t *testing.T) {
 		return DocEntity{ID: "42", Title: req.Title}, nil
 	}
 
-	err := Create[CreateDocRequest, DocEntity, DocResponse](fc).
+	// ✅ Updated: 4 type params
+	err := Create[CreateDocRequest, struct{}, DocEntity, DocResponse](fc).
 		Param("id").
 		Bind().
 		Validate(func(r CreateDocRequest) error {
@@ -142,7 +147,8 @@ func TestGetPipelineEndToEnd(t *testing.T) {
 		return DocEntity{ID: "7", Title: "Fetched"}, nil
 	}
 
-	err := Get[CreateDocRequest, DocEntity, DocResponse](fc).
+	// ✅ Updated: 4 type params
+	err := Get[CreateDocRequest, struct{}, DocEntity, DocResponse](fc).
 		Param("id").
 		Bind().
 		Handle(handle).
@@ -170,11 +176,13 @@ func TestDeletePipelineEndToEnd(t *testing.T) {
 	fc.body = []byte("{}")
 	fc.params["id"] = "99"
 
+	// ✅ Updated: Handler signature matches unified pipeline
 	handle := func(ctx Context, req struct{}, id any) (struct{}, error) {
 		return struct{}{}, nil
 	}
 
-	err := Delete[DocResponse](fc).
+	// ✅ Updated: 4 type params for Delete
+	err := Delete[struct{}, struct{}, struct{}, DocResponse](fc).
 		Param("id").
 		Bind().
 		Handle(handle).
@@ -201,7 +209,8 @@ func TestRegisterAndMap(t *testing.T) {
 		return DocEntity{ID: "55", Title: req.Title}, nil
 	}
 
-	err := Create[CreateDocRequest, DocEntity, DocResponse](fc).
+	// ✅ Updated: 4 type params
+	err := Create[CreateDocRequest, struct{}, DocEntity, DocResponse](fc).
 		Param("id").
 		Bind().
 		Handle(handle).

@@ -10,15 +10,14 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	rest "github.com/otmc-sw/rest"
-	converter "github.com/otmc-sw/rest/converter"
 	db "github.com/otmc-sw/rest/examples/fiber/db/sqlc"
 )
 
 type UserRequest struct {
-	Username string          `json:"username"`
-	FullName string          `json:"full_name,omitempty"`
-	Email    string          `json:"email"`
-	Content  json.RawMessage `json:"content,omitempty"`
+	Username *string          `json:"username"`
+	FullName *string          `json:"full_name,omitempty"`
+	Email    *string          `json:"email"`
+	Content  *json.RawMessage `json:"content,omitempty"`
 }
 
 type UserResponse struct {
@@ -31,23 +30,17 @@ type UserResponse struct {
 
 func ValidateUser(r UserRequest) error {
 	return rest.Validate().
-		Required(r.Username).
-		Email(r.Email).
+		Required(*r.Username).
+		Email(*r.Email).
 		Validate()
 }
 
 func CreateUser(c *fiber.Ctx) error {
 	return rest.
-		Create[UserRequest, db.User, UserResponse](FiberContext{Ctx: c}).
+		Create[UserRequest, db.CreateUserParams, db.User, UserResponse](FiberContext{Ctx: c}).
 		Bind().
 		Validate(ValidateUser).
-		Exec(func(ctx rest.Context, req UserRequest, id any) (any, error) {
-			params := db.CreateUserParams{
-				Username: req.Username,
-				FullName: converter.StringOrDefault(req.FullName, "Trung Nguyen Van"),
-				Email:    req.Email,
-				Content:  converter.BytesOrNull(req.Content),
-			}
+		Exec(func(ctx rest.Context, req UserRequest, params db.CreateUserParams, id any) (any, error) {
 			return database.CreateUser(ctx.Context(), params)
 		}).
 		Respond()
@@ -55,8 +48,8 @@ func CreateUser(c *fiber.Ctx) error {
 
 func GetUser(c *fiber.Ctx) error {
 	return rest.
-		Get[struct{}, db.User, UserResponse](FiberContext{Ctx: c}).
-		Exec(func(ctx rest.Context, req struct{}, id any) (any, error) {
+		Get[struct{}, struct{}, db.User, UserResponse](FiberContext{Ctx: c}).
+		Exec(func(ctx rest.Context, req struct{}, params struct{}, id any) (any, error) {
 			return database.GetUser(ctx.Context(), id.(int64))
 		}).
 		Respond()
@@ -64,8 +57,8 @@ func GetUser(c *fiber.Ctx) error {
 
 func GetAllUsers(c *fiber.Ctx) error {
 	return rest.
-		Get[struct{}, []db.User, []UserResponse](FiberContext{Ctx: c}).
-		Exec(func(ctx rest.Context, req struct{}, id any) (any, error) {
+		Get[struct{}, struct{}, []db.User, []UserResponse](FiberContext{Ctx: c}).
+		Exec(func(ctx rest.Context, req struct{}, params struct{}, id any) (any, error) {
 			return database.GetAllUsers(ctx.Context())
 		}).
 		Respond()
@@ -73,16 +66,10 @@ func GetAllUsers(c *fiber.Ctx) error {
 
 func UpdateUser(c *fiber.Ctx) error {
 	return rest.
-		Update[UserRequest, db.User, UserResponse](FiberContext{Ctx: c}).
+		Update[UserRequest, db.UpdateUserParams, db.User, UserResponse](FiberContext{Ctx: c}).
 		Bind().
 		Validate(ValidateUser).
-		Exec(func(ctx rest.Context, req UserRequest, id any) (any, error) {
-			params := db.UpdateUserParams{
-				Username: req.Username,
-				Email:    req.Email,
-				FullName: converter.StringOrNull(req.FullName),
-				ID:       id.(int64),
-			}
+		Exec(func(ctx rest.Context, req UserRequest, params db.UpdateUserParams, id any) (any, error) {
 			return nil, database.UpdateUser(ctx.Context(), params)
 		}).
 		Respond()
@@ -100,8 +87,8 @@ func PatchUser(c *fiber.Ctx) error {
 
 func DeleteUser(c *fiber.Ctx) error {
 	return rest.
-		Delete[UserResponse](FiberContext{Ctx: c}).
-		Exec(func(ctx rest.Context, req struct{}, id any) (any, error) {
+		Delete[struct{}, struct{}, struct{}, UserResponse](FiberContext{Ctx: c}).
+		Exec(func(ctx rest.Context, req struct{}, params struct{}, id any) (any, error) {
 			return nil, database.DeleteUser(ctx.Context(), id.(int64))
 		}).
 		Respond()
