@@ -81,10 +81,10 @@ import (
 )
 
 type UserRequest struct {
-	Username *string     `json:"username"`
-	FullName *string     `json:"full_name,omitempty"`
-	Email    *string     `json:"email"`
-	Content  interface{} `json:"content,omitempty"`
+	Username *string `json:"username"`
+	FullName *string `json:"full_name,omitempty"`
+	Email    *string `json:"email"`
+	Content  *string `json:"content,omitempty"`
 }
 
 type UserResponse struct {
