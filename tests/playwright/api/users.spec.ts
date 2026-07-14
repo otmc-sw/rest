@@ -407,7 +407,6 @@ test.describe('Users API', () => {
   });
 
   test('Full CRUD cycle - Create, Read, Update, Delete', async ({ request }) => {
-    // Create
     const newUser = generateTestUser();
     const createResponse = await request.post(`/users`, {
       data: newUser,
@@ -422,14 +421,12 @@ test.describe('Users API', () => {
     const userId = createdUser.id;
     createdUserIds.push(userId);
 
-    // Read
     const getResponse = await request.get(`/users/${userId}`);
     expect(getResponse.status()).toBe(200);
     const getBody = await getResponse.json();
     const fetchedUser = getBody.data || getBody;
     expect(fetchedUser.username).toBe(newUser.username);
 
-    // Update
     const updateData = {
       full_name: 'CRUD Updated Name'
     };
@@ -441,17 +438,14 @@ test.describe('Users API', () => {
     });
     expect(updateResponse.status()).toBe(200);
 
-    // Verify Update
     const verifyResponse = await request.get(`/users/${userId}`);
     const verifyBody = await verifyResponse.json();
     const updatedUser = verifyBody.data || verifyBody;
     expect(updatedUser.full_name).toBe('CRUD Updated Name');
 
-    // Delete
     const deleteResponse = await request.delete(`/users/${userId}`);
     expect([204, 200]).toContain(deleteResponse.status());
 
-    // Verify Deletion
     const afterDeleteResponse = await request.get(`/users/${userId}`);
     expect([400, 404]).toContain(afterDeleteResponse.status());
     

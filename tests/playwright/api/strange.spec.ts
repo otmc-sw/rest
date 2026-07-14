@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @License Apache License 2.0
  * @Copyright (c) 2026 OTMC Softwares. OTMC Golang REST.
  * @Contributors Nguyen Van Trung, Nguyen Thi Hoai, OTMC Contributors.
@@ -41,14 +41,12 @@ test.describe('Strange Input Tests', () => {
     test('GET /users/:id - should return 400 for negative ID', async ({ request }) => {
       const response = await request.get(`/users/-1`);
       
-      // Could be 400 or 404 depending on implementation
       expect([400, 404]).toContain(response.status());
     });
 
     test('GET /users/:id - should return 400 for empty ID', async ({ request }) => {
       const response = await request.get(`/users/`);
       
-      // Empty ID might return various status codes depending on routing
       expect([200, 400, 404]).toContain(response.status());
     });
 
@@ -125,9 +123,9 @@ test.describe('Strange Input Tests', () => {
 
     test('POST /users - should return 400 for wrong data types', async ({ request }) => {
       const invalidUser = {
-        username: 123,  // should be string
-        email: true,    // should be string
-        full_name: [],  // should be string
+        username: 123,
+        email: true,
+        full_name: [],
         content: 'this should be an object'  // should be object
       };
 
@@ -155,7 +153,6 @@ test.describe('Strange Input Tests', () => {
         }
       });
 
-      // API may accept or reject based on validation rules
       expect([201, 400]).toContain(response.status());
     });
 
@@ -196,7 +193,6 @@ test.describe('Strange Input Tests', () => {
     test('GET /users - should handle invalid query parameters gracefully', async ({ request }) => {
       const response = await request.get(`/users?invalid_param=invalid_value`);
       
-      // Should either work (ignore invalid params) or return 400
       expect([200, 400]).toContain(response.status());
     });
 
@@ -216,7 +212,6 @@ test.describe('Strange Input Tests', () => {
         }
       });
       
-      // Should return 404 (not found) or 405 (method not allowed)
       expect([404, 405]).toContain(response.status());
     });
   });
@@ -247,14 +242,12 @@ test.describe('Strange Input Tests', () => {
       const largeId = 999999999999999999;
       const response = await request.get(`/users/${largeId}`);
       
-      // Should return 404 (not found) or handle gracefully
       expect([200, 400, 404]).toContain(response.status());
     });
 
     test('GET /users/:id - should handle ID with leading zeros', async ({ request }) => {
       const response = await request.get(`/users/00042`);
       
-      // Should parse correctly or return 404
       expect([200, 400, 404]).toContain(response.status());
     });
 
@@ -272,7 +265,6 @@ test.describe('Strange Input Tests', () => {
         }
       });
 
-      // Should either accept unicode or return 400
       expect([201, 400]).toContain(response.status());
     });
 
@@ -293,7 +285,6 @@ test.describe('Strange Input Tests', () => {
         }
       });
 
-      // Should either accept emoji or return 400
       expect([201, 400]).toContain(response.status());
     });
   });

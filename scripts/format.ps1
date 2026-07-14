@@ -18,7 +18,9 @@ $SrcDirs       = @(
 $IgnoredDirs   = @(
     "\logs\",
     "\docs\",
-    "\sqlc\"
+    "\sqlc\",
+    "\node_modules\",
+    "\test-results\"
 )
 $Whitelist     = @(
     "Apache License",
@@ -96,12 +98,12 @@ foreach ($Dir in $SrcDirs) {
         continue
     }
 
-    Write-Host "`n📁 Scanning Go files in: $Dir" -ForegroundColor Blue
-    $Files = Get-ChildItem -Path $Dir -Recurse -Filter *.go | Where-Object { -not (Is-IgnoredPath $_.FullName) }
+    Write-Host "`n📁 Scanning Go and TS files in: $Dir" -ForegroundColor Blue
+    $Files = Get-ChildItem -Path $Dir -Recurse -Include *.go,*.ts | Where-Object { -not (Is-IgnoredPath $_.FullName) }
 
     foreach ($File in $Files) {
         $index = $Files.IndexOf($File) + 1
-        Write-Host ("  → {0,3}/{1,3} 🌿 Processing: {2}" -f $index, $Files.Count, $File.Name)
+        Write-Host ("    → {0,3}/{1,3} 🌿 Processing: {2}" -f $index, $Files.Count, $File.Name)
         Process-GoFile -FilePath $File.FullName
     }
     Write-Host "🚀 Completed folder $Dir with $($Files.Count) files" -ForegroundColor Green
