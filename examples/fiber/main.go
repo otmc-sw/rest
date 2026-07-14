@@ -6,25 +6,98 @@
 package main
 
 import (
-	"log"
+	_ "embed"
+	"flag"
+	"fmt"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"syscall"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/otmc-sw/logger"
-	"github.com/otmc-sw/rest/examples/fiber/db"
-	"github.com/otmc-sw/rest/examples/fiber/handlers"
+
+	db "github.com/otmc-sw/rest/examples/fiber/db"
+	handlers "github.com/otmc-sw/rest/examples/fiber/handlers"
 )
 
-func main() {
+var (
+	FLAG_PROD  = false
+	FLAG_DEBUG = false
+	PORT       = 3000
+	DIR_RUN, _ = os.Getwd()
 
-	db, err := db.New()
-	if err != nil {
-		logger.Crit("Failed to connect to database: %v", err)
+	app      *fiber.App
+	database *db.DataBase
+)
+
+func PrintBanner() {
+	fmt.Println("========================================")
+	fmt.Println("  OTMC REST Example Server")
+	fmt.Println("========================================")
+}
+
+func CreateDataDirectories() {
+	dirs := []string{
+		filepath.Join(DIR_RUN, "data", "db"),
+		filepath.Join(DIR_RUN, "data", "logs"),
 	}
 
-	handlers.New(db.Queries)
+	for _, dir := range dirs {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			logger.Crit("❌ Create directory failed: %s %v", dir, err)
+			os.Exit(1)
+		}
+		logger.Info("📁 Directory ready: %s", dir)
+	}
+}
 
-	app := fiber.New()
+func Initializer() {
+	var err error
+
+	PrintBanner()
+
+	logFile := filepath.Join(DIR_RUN, "data", "logs", "app.log")
+	logger.Configure(
+		logger.WithFile(logFile),
+	)
+
+	if FLAG_DEBUG {
+		logger.SetLevel(logger.DebugLevel)
+	}
+
+	logger.Info("✅ Logger initialized successfully")
+
+	logger.Info("✨ Initializing application...")
+	CreateDataDirectories()
+
+	logger.Info("📚 Initializing database connection ...")
+	database, err = db.New()
+	if err != nil {
+		logger.Error("❌ Failed to connect to database: %v", err)
+		os.Exit(1)
+	}
+
+	logger.Info("✅ Database connection established.")
+
+	logger.Info("📦 Setting up handlers...")
+	handlers.New(database.Queries)
+	logger.Info("✅ Handlers configured.")
+
+	app = fiber.New(fiber.Config{
+		AppName:     "OTMC REST Example Server",
+		IdleTimeout: 30 * time.Second,
+	})
+
+	app.Use(cors.New(cors.Config{
+		AllowOriginsFunc: func(origin string) bool { return true },
+		AllowMethods:     "GET,POST,PUT,DELETE,PATCH,OPTIONS",
+		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,X-Request-ID",
+		AllowCredentials: true,
+		MaxAge:           86400,
+	}))
 
 	app.Use(func(c *fiber.Ctx) error {
 		start := time.Now()
@@ -32,6 +105,14 @@ func main() {
 		logger.Request(c.Method(), c.Path(), c.Response().StatusCode(), time.Since(start), c.IP())
 		return err
 	})
+
+	logger.Info("📁 Run directory: %s", DIR_RUN)
+}
+
+func Runner() {
+	logger.Info("🌿 Running application ...")
+
+	logger.Info("🌐 Registering APIs ...")
 
 	app.Post("/users", handlers.CreateUser)
 	app.Get("/users", handlers.GetAllUsers)
@@ -41,6 +122,37 @@ func main() {
 
 	app.Get("/test", handlers.TestResponse)
 
-	logger.Info("Server started on :3000")
-	log.Fatal(app.Listen(":3000"))
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		addr := fmt.Sprintf(":%d", PORT)
+		logger.Info("🚀 Server starting at http://localhost:%d", PORT)
+		if err := app.Listen(addr); err != nil {
+			logger.Error("❌ Server failed: %v", err)
+		}
+	}()
+
+	<-quit
+	logger.Info("🛑 Shutdown signal received.")
+}
+
+func Finisher() {
+	if database != nil {
+		database.Close()
+	}
+}
+
+func ParserArguments() {
+	flag.BoolVar(&FLAG_PROD, "P", false, "Run in production mode")
+	flag.BoolVar(&FLAG_DEBUG, "d", false, "Enable debug mode")
+	flag.IntVar(&PORT, "p", PORT, "Port")
+	flag.Parse()
+}
+
+func main() {
+	ParserArguments()
+	Initializer()
+	Runner()
+	Finisher()
 }
