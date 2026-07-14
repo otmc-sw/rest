@@ -6,6 +6,7 @@
 package pipeline
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/otmc-sw/rest/context"
@@ -17,11 +18,9 @@ import (
 	"github.com/otmc-sw/rest/validator"
 )
 
-
 type Handler[Req any, Entity any] func(ctx context.Context, req Req, id any) (Entity, error)
 type ExecHandler[Req any] func(ctx context.Context, req Req, id any) (any, error)
 type PatchHandler[Req any, Params any] func(ctx context.Context, req Req, params Params, id any) (any, error)
-
 
 type Pipeline[Req any, Params any, Entity any, Res any] struct {
 	ctx      context.Context
@@ -38,7 +37,6 @@ type Pipeline[Req any, Params any, Entity any, Res any] struct {
 func newPipeline[Req any, Params any, Entity any, Res any](ctx context.Context, status int) *Pipeline[Req, Params, Entity, Res] {
 	return &Pipeline[Req, Params, Entity, Res]{ctx: ctx, status: status}
 }
-
 
 func Create[Req any, Params any, Entity any, Res any](ctx context.Context) *Pipeline[Req, Params, Entity, Res] {
 	debugger.Pipeline("Create[%T, %T]", *new(Req), *new(Entity))
@@ -64,7 +62,6 @@ func Delete[Req any, Params any, Entity any, Res any](ctx context.Context) *Pipe
 	debugger.Pipeline("Delete")
 	return newPipeline[Req, Params, Entity, Res](ctx, 204)
 }
-
 
 func (p *Pipeline[Req, Params, Entity, Res]) Param(key string) *Pipeline[Req, Params, Entity, Res] {
 	if p.err != nil {
@@ -120,6 +117,9 @@ func (p *Pipeline[Req, Params, Entity, Res]) Handle(h Handler[Req, Entity]) *Pip
 		return p
 	}
 	p.ensureID()
+	if p.err != nil {
+		return p
+	}
 	debugger.PipelineStep("Handle", "executing")
 	entity, err := h(p.ctx, *p.bound, p.id)
 	if err != nil {
@@ -141,6 +141,9 @@ func (p *Pipeline[Req, Params, Entity, Res]) Exec(h PatchHandler[Req, Params]) *
 		p.bound = &req
 	}
 	p.ensureID()
+	if p.err != nil {
+		return p
+	}
 
 	if p.paramsFn == nil {
 		p.params = mapper.Map[Params](*p.bound)
@@ -172,7 +175,6 @@ func (p *Pipeline[Req, Params, Entity, Res]) Exec(h PatchHandler[Req, Params]) *
 	return p
 }
 
-
 func (p *Pipeline[Req, Params, Entity, Res]) Respond() error {
 	debugger.PipelineStep("Respond", "status=%d", p.status)
 
@@ -194,7 +196,7 @@ func (p *Pipeline[Req, Params, Entity, Res]) Respond() error {
 }
 
 func (p *Pipeline[Req, Params, Entity, Res]) respondError() error {
-	debugger.Error(debugger.ComponentPipeline, "📚 %v", p.err)
+	debugger.Error(debugger.ComponentPipeline, "📚 Reason : %v", p.err)
 	if appErr, ok := p.err.(errors.Error); ok {
 		return errors.New().Skip(3).
 			Code(appErr.Details.Code).
@@ -204,7 +206,6 @@ func (p *Pipeline[Req, Params, Entity, Res]) respondError() error {
 	}
 	return errors.New().Skip(3).BadRequest().Summary("Request Failed").Detail(p.err).Send(p.ctx)
 }
-
 
 func (p *Pipeline[Req, Params, Entity, Res]) ensureID() {
 	if p.err != nil {
@@ -217,9 +218,14 @@ func (p *Pipeline[Req, Params, Entity, Res]) ensureID() {
 		if n, err := strconv.ParseInt(s, 10, 64); err == nil {
 			p.id = n
 			debugger.Pipeline("autoParseID: %q → %d", s, n)
+		} else {
+			p.err = errors.New().Skip(2).BadRequest().
+				Summary("Invalid ID format").
+				Detail(fmt.Errorf("ID must be a number, got: %s", s)).
+				Build()
+			debugger.Error(debugger.ComponentPipeline, "Invalid ID format: %s", s)
 		}
 	}
 }
-
 
 func Validate() *validator.Validator { return validator.New() }

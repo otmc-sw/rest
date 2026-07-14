@@ -99,3 +99,31 @@ func TestPipelineEndToEnd(t *testing.T) {
 		t.Fatalf("expected a written body, got empty")
 	}
 }
+
+func TestInvalidIDFormat(t *testing.T) {
+	payload, _ := json.Marshal(CreateDocRequest{Title: "Hello"})
+	fc := &fakeContext{
+		ctx:    stdc.Background(),
+		params: map[string]string{"id": "abc"},
+		body:   payload,
+		header: http.Header{},
+	}
+
+	handle := func(ctx restcontext.Context, req CreateDocRequest, id any) (DocEntity, error) {
+		return DocEntity{ID: "abc", Title: req.Title}, nil
+	}
+
+	Create[CreateDocRequest, CreateDocRequest, DocEntity, DocResponse](fc).
+		Param("id").
+		Bind().
+		Handle(handle).
+		Respond()
+
+	if fc.status != 400 {
+		t.Fatalf("expected status 400 for invalid ID format, got %d", fc.status)
+	}
+	
+	if fc.wrote == nil {
+		t.Fatal("expected error response to be written")
+	}
+}
