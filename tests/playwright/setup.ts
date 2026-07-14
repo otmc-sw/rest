@@ -1,10 +1,8 @@
 ﻿/**
- * @License OTMC License
- * @Copyright (c) 2026 OTMC Softwares. All rights reserved.
- * @Contributors Trung Ng, OTMC Authors.
- * 
- * Global setup: wait for backend server to be ready before running tests.
- */
+ * @License Apache License 2.0
+ * @Copyright (c) 2026 OTMC Softwares. OTMC Golang REST.
+ * @Contributors Nguyen Van Trung, Nguyen Thi Hoai, OTMC Contributors.
+**/
 import { request, FullConfig } from '@playwright/test';
 
 const MAX_RETRIES = 5;
