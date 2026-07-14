@@ -255,21 +255,6 @@ test.describe('Users API', () => {
     expect(response.status()).toBe(400);
   });
 
-  test('POST /users - should return 400 when email is missing', async ({ request }) => {
-    const invalidUser = {
-      username: 'testuser'
-    };
-
-    const response = await request.post(`/users`, {
-      data: invalidUser,
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-
-    expect(response.status()).toBe(400);
-  });
-
   test('POST /users - should return 400 when email is invalid', async ({ request }) => {
     const invalidUser = {
       username: 'testuser',

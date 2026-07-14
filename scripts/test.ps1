@@ -10,13 +10,17 @@ Write-Host '╔═════════════════════�
 Write-Host '║              Test Manager v1.0                   ║' -ForegroundColor Cyan
 Write-Host '╚══════════════════════════════════════════════════╝' -ForegroundColor Cyan
 
-if ($args.Count -gt 0) {
-    $option = $args[0]
-} else {
+function Show-Menu {
     Write-Host "  1. Run Fiber example" -ForegroundColor Green
     Write-Host "  2. Test Fiber example" -ForegroundColor Green
     Write-Host "  3. Run Playwright tests" -ForegroundColor Green
     Write-Host "  4. Go test ./..." -ForegroundColor Green
+}
+
+if ($args.Count -gt 0) {
+    $option = $args[0]
+} else {
+    Show-Menu
     $option = Read-Host ">> Select option (1-4)"
 }
 
@@ -27,7 +31,7 @@ switch ($option) {
         go mod tidy
         go build -o fiber.exe
         if ($LASTEXITCODE -ne 0) {
-            Write-Host "Go build failed" -ForegroundColor Red
+            Write-Host "ERROR: Go build failed with exit code $LASTEXITCODE" -ForegroundColor Red
             exit 1
         }
         & .\fiber.exe
@@ -38,7 +42,9 @@ switch ($option) {
     }
     "3" {
         Set-Location $TOP/tests/playwright
-        npm install
+        if (-not (Test-Path "node_modules")) {
+            npm install
+        }
         npx playwright test
     }
     "4" {
@@ -46,6 +52,7 @@ switch ($option) {
         go test -v ./...
     }
     default {
-        Write-Host "Invalid option" -ForegroundColor Red
+        Write-Host "ERROR: Invalid option provided: '$option'" -ForegroundColor Red
+        exit 1
     }
 }

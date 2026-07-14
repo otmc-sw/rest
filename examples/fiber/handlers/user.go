@@ -7,6 +7,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	rest "github.com/otmc-sw/rest"
@@ -21,11 +22,13 @@ type UserRequest struct {
 }
 
 type UserResponse struct {
-	ID       int64       `json:"id"`
-	Username string      `json:"username"`
-	FullName string      `json:"full_name,omitempty"`
-	Email    string      `json:"email"`
-	Content  interface{} `json:"content,omitempty"`
+	ID        int64       `json:"id"`
+	Username  string      `json:"username"`
+	FullName  string      `json:"full_name,omitempty"`
+	Email     string      `json:"email"`
+	Content   interface{} `json:"content,omitempty"`
+	CreatedAt time.Time   `json:"created_at"`
+	UpdatedAt time.Time   `json:"updated_at"`
 }
 
 func ValidateUser(r UserRequest) error {
