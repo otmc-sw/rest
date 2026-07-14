@@ -1,12 +1,12 @@
-# Gin Integration
+# 🎨 Gin Integration
 
-## [INSTALL] Installation
+## 📦 Installation
 
 ```bash
 go get github.com/otmc-sw/rest@latest
 ```
 
-## [USAGE] Usage
+## 📖 Usage
 
 ### 1. Create Gin Context
 
@@ -177,6 +177,9 @@ import (
 	handlers "otmc/app/handlers"
 )
 
+//go:embed configs/banner.txt
+var APP_BANNER string
+
 var (
 	FLAG_PROD  = false
 	FLAG_DEBUG = false
@@ -188,9 +191,58 @@ var (
 )
 
 func PrintBanner() {
-	fmt.Println("========================================")
-	fmt.Println("  OTMC REST Example Server")
-	fmt.Println("========================================")
+	fmt.Print(APP_BANNER)
+}
+
+func ParserArguments() {
+	flag.BoolVar(&FLAG_PROD, "P", false, "Run in production mode")
+	flag.BoolVar(&FLAG_DEBUG, "d", false, "Enable debug mode")
+	flag.IntVar(&PORT, "p", PORT, "Port")
+	flag.Parse()
+}
+
+func SetupLogger() {
+	logFile := filepath.Join(DIR_RUN, "data", "logs", "app.log")
+	logger.Configure(
+		logger.WithFile(logFile),
+	)
+
+	if FLAG_DEBUG {
+		logger.SetLevel(logger.DebugLevel)
+	}
+
+	logger.Info("✅ Logger initialized successfully.")
+}
+
+func InitializeDatabase() {
+	var err error
+
+	logger.Info("✨ Initializing database connection...")
+	database, err = db.New()
+	if err != nil {
+		logger.Error("❌ Failed to connect to database: %v", err)
+		os.Exit(1)
+	}
+
+	logger.Info("✅ Database connection established.")
+}
+
+func SetupGin() {
+	gin.SetMode(gin.ReleaseMode)
+	app = gin.New()
+
+	app.Use(cors.New(cors.Config{
+		AllowAllOrigins:  true,
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Request-ID"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+}
+
+func SetupHandlers() {
+	logger.Info("📚 Setting up handlers...")
+	handlers.New(database.Queries)
 }
 
 func CreateDataDirectories() {
@@ -201,71 +253,28 @@ func CreateDataDirectories() {
 
 	for _, dir := range dirs {
 		if err := os.MkdirAll(dir, 0755); err != nil {
-			logger.Crit("Create directory failed: %s %v", dir, err)
+			logger.Crit("❌ Create directory failed: %s %v", dir, err)
 			os.Exit(1)
 		}
-		logger.Info("Directory ready: %s", dir)
+		logger.Info("📁 Directory ready: %s", dir)
 	}
 }
 
 func Initializer() {
-	var err error
-
 	PrintBanner()
-
-	logFile := filepath.Join(DIR_RUN, "data", "logs", "app.log")
-	logger.Configure(
-		logger.WithFile(logFile),
-	)
-
-	if FLAG_DEBUG {
-		logger.SetLevel(logger.DebugLevel)
-	}
-
-	logger.Info("Logger initialized successfully")
-
-	logger.Info("Initializing application...")
+	ParserArguments()
+	SetupLogger()
 	CreateDataDirectories()
-
-	logger.Info("Initializing database connection...")
-	database, err = db.New()
-	if err != nil {
-		logger.Error("Failed to connect to database: %v", err)
-		os.Exit(1)
-	}
-
-	logger.Info("Database connection established.")
-
-	logger.Info("Setting up handlers...")
-	handlers.New(database.Queries)
-	logger.Info("Handlers configured.")
-
-	gin.SetMode(gin.ReleaseMode)
-	app = gin.New()
-
-	app.Use(cors.New(cors.Config{
-		AllowAllOrigins:  true,
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Request-ID"},
-		AllowCredentials: true,
-		MaxAge:           24 * time.Hour,
-	}))
-
-	app.Use(func(c *gin.Context) {
-		start := time.Now()
-		c.Next()
-		logger.Request(c.Request.Method, c.Request.URL.Path, c.Writer.Status(), time.Since(start), c.ClientIP())
-	})
-
-	logger.Info("Run directory: %s", DIR_RUN)
+	InitializeDatabase()
+	SetupGin()
+	SetupHandlers()
 }
 
 func Runner() {
-	logger.Info("Running application...")
+	logger.Info("🌿 Running application ...")
 	api := app.Group("/api")
 
-	logger.Info("Registering APIs...")
-
+	logger.Info("📚 Registering APIs...")
 	api.POST("/users", handlers.CreateUser)
 	api.GET("/users", handlers.GetAllUsers)
 	api.GET("/users/:id", handlers.GetUser)
@@ -279,14 +288,14 @@ func Runner() {
 
 	go func() {
 		addr := fmt.Sprintf(":%d", PORT)
-		logger.Info("Server starting at http://localhost:%d", PORT)
+		logger.Info("🚀 Server starting at http://localhost:%d", PORT)
 		if err := app.Run(addr); err != nil {
-			logger.Error("Server failed: %v", err)
+			logger.Error("❌ Server failed: %v", err)
 		}
 	}()
 
 	<-quit
-	logger.Info("Shutdown signal received.")
+	logger.Info("🛑 Shutdown signal received.")
 }
 
 func Finisher() {
@@ -295,16 +304,10 @@ func Finisher() {
 	}
 }
 
-func ParserArguments() {
-	flag.BoolVar(&FLAG_PROD, "P", false, "Run in production mode")
-	flag.BoolVar(&FLAG_DEBUG, "d", false, "Enable debug mode")
-	flag.IntVar(&PORT, "p", PORT, "Port")
-	flag.Parse()
-}
-
 func main() {
-	ParserArguments()
 	Initializer()
 	Runner()
 	Finisher()
 }
+
+```
