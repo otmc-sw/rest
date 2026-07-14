@@ -1,4 +1,4 @@
-# Fiber Integration
+# Gin Integration
 
 ## [INSTALL] Installation
 
@@ -8,25 +8,24 @@ go get github.com/otmc-sw/rest@latest
 
 ## [USAGE] Usage
 
-### 1. Create Fiber Context
+### 1. Create Gin Context
 
-Create a context adapter for Fiber:
+Create a context adapter for Gin:
 
 ```go
 package handlers_v2
 
 import (
-	"bytes"
 	"context"
 	"io"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gin-gonic/gin"
 	rest "github.com/otmc-sw/rest"
 	sqlc "otmc/app/db/sqlc"
 )
 
-type FiberContext struct {
-	*fiber.Ctx
+type GinContext struct {
+	*gin.Context
 }
 
 var database *sqlc.Queries
@@ -35,29 +34,35 @@ func New(db *sqlc.Queries) {
 	database = db
 }
 
-func (c FiberContext) Context() context.Context { return c.Ctx.Context() }
-func (c FiberContext) Param(key string) string  { return c.Ctx.Params(key) }
-func (c FiberContext) Query(key string) string  { return c.Ctx.Query(key) }
-func (c FiberContext) QueryAll(key string) []string {
-	v := c.Ctx.Query(key)
+func (c GinContext) Context() context.Context { return c.Request.Context() }
+func (c GinContext) Param(key string) string  { return c.Param(key) }
+func (c GinContext) Query(key string) string  { return c.Query(key) }
+func (c GinContext) QueryAll(key string) []string {
+	v := c.Query(key)
 	if v == "" {
 		return nil
 	}
 	return []string{v}
 }
-func (c FiberContext) Header(key string) string { return c.Ctx.Get(key) }
-func (c FiberContext) Cookie(key string) string { return c.Ctx.Cookies(key) }
-func (c FiberContext) Body() io.Reader          { return bytes.NewReader(c.Ctx.Body()) }
-func (c FiberContext) Bind(v interface{}) error { return c.Ctx.BodyParser(v) }
-func (c FiberContext) JSON(code int, body interface{}) error {
-	return c.Ctx.Status(code).JSON(body)
+func (c GinContext) Header(key string) string { return c.GetHeader(key) }
+func (c GinContext) Cookie(key string) string  { return c.Cookie(key) }
+func (c GinContext) Body() io.Reader          { return c.Request.Body }
+func (c GinContext) Bind(v interface{}) error { return c.ShouldBindJSON(v) }
+func (c GinContext) JSON(code int, body interface{}) error {
+	c.JSON(code, body)
+	return nil
 }
-func (c FiberContext) Status(code int)             { c.Ctx.Status(code) }
-func (c FiberContext) SetHeader(key, value string) { c.Ctx.Set(key, value) }
-func (c FiberContext) Method() string              { return c.Ctx.Method() }
-func (c FiberContext) Path() string                { return c.Ctx.Path() }
-func (c FiberContext) String() (string, error)     { return string(c.Ctx.Body()), nil }
-func (c FiberContext) Bytes() ([]byte, error)      { return c.Ctx.Body(), nil }
+func (c GinContext) Status(code int)             { c.Status(code) }
+func (c GinContext) SetHeader(key, value string) { c.Header(key, value) }
+func (c GinContext) Method() string              { return c.Request.Method }
+func (c GinContext) Path() string                { return c.Request.URL.Path }
+func (c GinContext) String() (string, error) {
+	body, _ := io.ReadAll(c.Request.Body)
+	return string(body), nil
+}
+func (c GinContext) Bytes() ([]byte, error) {
+	return io.ReadAll(c.Request.Body)
+}
 ```
 
 ### 2. Create Handlers
@@ -68,19 +73,18 @@ Example handlers for users:
 package handlers
 
 import (
-	"encoding/json"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gin-gonic/gin"
 	rest "github.com/otmc-sw/rest"
-	db "github.com/otmc-sw/rest/examples/fiber/db/sqlc"
+	db "github.com/otmc-sw/rest/examples/gin/db/sqlc"
 )
 
 type UserRequest struct {
-	Username *string          `json:"username"`
-	FullName *string          `json:"full_name,omitempty"`
-	Email    *string          `json:"email"`
-	Content  *json.RawMessage `json:"content,omitempty"`
+	Username *string     `json:"username"`
+	FullName *string     `json:"full_name,omitempty"`
+	Email    *string     `json:"email"`
+	Content  interface{} `json:"content,omitempty"`
 }
 
 type UserResponse struct {
@@ -100,9 +104,9 @@ func ValidateUser(r UserRequest) error {
 		Process()
 }
 
-func CreateUser(c *fiber.Ctx) error {
+func CreateUser(c *gin.Context) error {
 	return rest.
-		Create[UserRequest, db.CreateUserParams, db.User, UserResponse](FiberContext{Ctx: c}).
+		Create[UserRequest, db.CreateUserParams, db.User, UserResponse](GinContext{Context: c}).
 		Bind().
 		Validate(ValidateUser).
 		Exec(func(ctx rest.Context, req UserRequest, params db.CreateUserParams, id any) (any, error) {
@@ -111,27 +115,27 @@ func CreateUser(c *fiber.Ctx) error {
 		Respond()
 }
 
-func GetUser(c *fiber.Ctx) error {
+func GetUser(c *gin.Context) error {
 	return rest.
-		Get[struct{}, struct{}, db.User, UserResponse](FiberContext{Ctx: c}).
+		Get[struct{}, struct{}, db.User, UserResponse](GinContext{Context: c}).
 		Exec(func(ctx rest.Context, req struct{}, params struct{}, id any) (any, error) {
 			return database.GetUser(ctx.Context(), id.(int64))
 		}).
 		Respond()
 }
 
-func GetAllUsers(c *fiber.Ctx) error {
+func GetAllUsers(c *gin.Context) error {
 	return rest.
-		Get[struct{}, struct{}, []db.User, []UserResponse](FiberContext{Ctx: c}).
+		Get[struct{}, struct{}, []db.User, []UserResponse](GinContext{Context: c}).
 		Exec(func(ctx rest.Context, req struct{}, params struct{}, id any) (any, error) {
 			return database.GetAllUsers(ctx.Context())
 		}).
 		Respond()
 }
 
-func UpdateUser(c *fiber.Ctx) error {
+func UpdateUser(c *gin.Context) error {
 	return rest.
-		Update[UserRequest, db.UpdateUserParams, db.User, UserResponse](FiberContext{Ctx: c}).
+		Update[UserRequest, db.UpdateUserParams, db.User, UserResponse](GinContext{Context: c}).
 		Bind().
 		Exec(func(ctx rest.Context, req UserRequest, params db.UpdateUserParams, id any) (any, error) {
 			return database.UpdateUser(ctx.Context(), params)
@@ -139,9 +143,9 @@ func UpdateUser(c *fiber.Ctx) error {
 		Respond()
 }
 
-func DeleteUser(c *fiber.Ctx) error {
+func DeleteUser(c *gin.Context) error {
 	return rest.
-		Delete[struct{}, struct{}, struct{}, UserResponse](FiberContext{Ctx: c}).
+		Delete[struct{}, struct{}, struct{}, UserResponse](GinContext{Context: c}).
 		Exec(func(ctx rest.Context, req struct{}, params struct{}, id any) (any, error) {
 			return nil, database.DeleteUser(ctx.Context(), id.(int64))
 		}).
@@ -149,7 +153,7 @@ func DeleteUser(c *fiber.Ctx) error {
 }
 ```
 
-### 3. Initialize Fiber App
+### 3. Initialize Gin App
 
 Example application setup:
 
@@ -157,7 +161,6 @@ Example application setup:
 package main
 
 import (
-	_ "embed"
 	"flag"
 	"fmt"
 	"os"
@@ -166,11 +169,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 	"github.com/otmc-sw/logger"
 
-	db "github.com/otmc-sw/rest/examples/fiber/db"
+	db "github.com/otmc-sw/rest/examples/gin/db"
 	handlers "otmc/app/handlers"
 )
 
@@ -180,7 +183,7 @@ var (
 	PORT       = 3000
 	DIR_RUN, _ = os.Getwd()
 
-	app      *fiber.App
+	app      *gin.Engine
 	database *db.DataBase
 )
 
@@ -237,24 +240,21 @@ func Initializer() {
 	handlers.New(database.Queries)
 	logger.Info("Handlers configured.")
 
-	app = fiber.New(fiber.Config{
-		AppName:     "OTMC REST Example Server",
-		IdleTimeout: 30 * time.Second,
-	})
+	gin.SetMode(gin.ReleaseMode)
+	app = gin.New()
 
 	app.Use(cors.New(cors.Config{
-		AllowOriginsFunc: func(origin string) bool { return true },
-		AllowMethods:     "GET,POST,PUT,DELETE,PATCH,OPTIONS",
-		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,X-Request-ID",
+		AllowAllOrigins:  true,
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Request-ID"},
 		AllowCredentials: true,
-		MaxAge:           86400,
+		MaxAge:           24 * time.Hour,
 	}))
 
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c *gin.Context) {
 		start := time.Now()
-		err := c.Next()
-		logger.Request(c.Method(), c.Path(), c.Response().StatusCode(), time.Since(start), c.IP())
-		return err
+		c.Next()
+		logger.Request(c.Request.Method, c.Request.URL.Path, c.Writer.Status(), time.Since(start), c.ClientIP())
 	})
 
 	logger.Info("Run directory: %s", DIR_RUN)
@@ -266,13 +266,13 @@ func Runner() {
 
 	logger.Info("Registering APIs...")
 
-	api.Post("/users", handlers.CreateUser)
-	api.Get("/users", handlers.GetAllUsers)
-	api.Get("/users/:id", handlers.GetUser)
-	api.Patch("/users/:id", handlers.UpdateUser)
-	api.Delete("/users/:id", handlers.DeleteUser)
+	api.POST("/users", handlers.CreateUser)
+	api.GET("/users", handlers.GetAllUsers)
+	api.GET("/users/:id", handlers.GetUser)
+	api.PATCH("/users/:id", handlers.UpdateUser)
+	api.DELETE("/users/:id", handlers.DeleteUser)
 
-	api.Get("/test", handlers.TestResponse)
+	api.GET("/test", handlers.TestResponse)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
@@ -280,7 +280,7 @@ func Runner() {
 	go func() {
 		addr := fmt.Sprintf(":%d", PORT)
 		logger.Info("Server starting at http://localhost:%d", PORT)
-		if err := app.Listen(addr); err != nil {
+		if err := app.Run(addr); err != nil {
 			logger.Error("Server failed: %v", err)
 		}
 	}()
