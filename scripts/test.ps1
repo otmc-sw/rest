@@ -14,9 +14,10 @@ if ($args.Count -gt 0) {
     $option = $args[0]
 } else {
     Write-Host "  1. Run Fiber example" -ForegroundColor Green
-    Write-Host "  2. Run Gin example" -ForegroundColor Green
-    Write-Host "  3. Go test ./..." -ForegroundColor Green
-    $option = Read-Host ">> Select option (1-3)"
+    Write-Host "  2. Test Fiber example" -ForegroundColor Green
+    Write-Host "  3. Run Playwright tests" -ForegroundColor Green
+    Write-Host "  4. Go test ./..." -ForegroundColor Green
+    $option = Read-Host ">> Select option (1-4)"
 }
 
 switch ($option) {
@@ -32,10 +33,15 @@ switch ($option) {
         & .\fiber.exe
     }
     "2" {
-        Set-Location $TOP/examples/gin
-        go run main.go
+        Set-Location $TOP/examples/fiber
+        go test -v ./...
     }
     "3" {
+        Set-Location $TOP/tests/playwright
+        npm install
+        npx playwright test
+    }
+    "4" {
         Set-Location $TOP
         go test -v ./...
     }

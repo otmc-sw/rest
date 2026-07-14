@@ -25,7 +25,8 @@ PATCH {{baseUrl}}/users/1
 Content-Type: application/json
 
 {
-  "email": "trung_updated@otmc.com.vn"
+  "email": "trung_updated@otmc.com.vn",
+  "content": "{\"test\": \"updated\"}"
 }
 
 ### Delete a user (valid)

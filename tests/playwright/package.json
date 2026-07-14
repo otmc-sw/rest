@@ -1,0 +1,24 @@
+{
+  "name": "test-document-hub",
+  "version": "0.1.1",
+  "description": "Playwright tests for Document Hub APIs and UI",
+  "main": "index.js",
+  "scripts": {
+    "test:api": "playwright test api/",
+    "test:ui": "playwright test ui/",
+    "test:all": "playwright test",
+    "test:headed": "playwright test ui/ --headed",
+    "test:debug": "playwright test --debug",
+    "report": "playwright show-report",
+    "clean": "rimraf test-results/",
+    "install:browsers": "playwright install chromium"
+  },
+  "keywords": ["playwright", "tests", "document-hub", "api", "testing", "automation"],
+  "author": "OTMC Softwares",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@types/node": "^26.1.1"
+  }
+}
