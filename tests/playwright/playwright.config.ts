@@ -9,7 +9,7 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: false,
   retries: 0,
-  workers: 8,
+  workers: 4,
   reporter: 'list',
   globalSetup: './setup.ts',
   use: {
