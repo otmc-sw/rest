@@ -82,7 +82,9 @@ import (
     "github.com/gofiber/fiber/v2"
 )
 
-type FiberContext struct{ *fiber.Ctx }
+type FiberContext struct {
+    *fiber.Ctx
+}
 
 func (c FiberContext) Context() context.Context { return c.Ctx.Context() }
 func (c FiberContext) Param(key string) string  { return c.Ctx.Params(key) }
@@ -111,39 +113,41 @@ func (c FiberContext) Bytes() ([]byte, error)      { return c.Ctx.Body(), nil }
 
 ### Handlers describe only the business flow
 
-The pipeline coordinates everything: **Request → Bind → Validate → Exec → Map → Respond**.
+The pipeline coordinates everything: **Request → Bind → Validate → Params → Exec → Map → Respond**.
 You only declare the flow and the business closure.
 
 ```go
 type UserRequest struct {
-    Username string
-    Email    string
+    Username *string          `json:"username"`
+    FullName *string          `json:"full_name,omitempty"`
+    Email    *string          `json:"email"`
+    Content  *json.RawMessage `json:"content,omitempty"`
 }
 
 type UserResponse struct {
-    ID       int64  `json:"id"`
-    Username string `json:"username"`
-    Email    string `json:"email"`
+    ID        int64       `json:"id"`
+    Username  string      `json:"username"`
+    FullName  string      `json:"full_name,omitempty"`
+    Email     string      `json:"email"`
+    Content   interface{} `json:"content,omitempty"`
+    CreatedAt time.Time   `json:"created_at"`
+    UpdatedAt time.Time   `json:"updated_at"`
 }
 
 func ValidateUser(r UserRequest) error {
-    return rest.Validate().
+    return rest.Validator().
         Required(r.Username).
         Email(r.Email).
-        Validate()
+        Process()
 }
 
 func CreateUser(c *fiber.Ctx) error {
 	return rest.
-		Create[UserRequest, db.User, UserResponse](FiberContext{Ctx: c}).
+		Create[UserRequest, db.CreateUserParams, db.User, UserResponse](FiberContext{Ctx: c}).
 		Bind().
 		Validate(ValidateUser).
-		Exec(func(ctx rest.Context, req UserRequest, id any) (any, error) {
-			params := db.CreateUserParams{
-				Username: req.Email,
-				Email:    req.Email,
-			}
-			return nil, database.CreateUser(ctx.Context(), params)
+		Exec(func(ctx rest.Context, req UserRequest, params db.CreateUserParams, id any) (any, error) {
+			return database.CreateUser(ctx.Context(), params)
 		}).
 		Respond()
 }
@@ -152,22 +156,29 @@ func CreateUser(c *fiber.Ctx) error {
 `Respond()` automatically maps the `db.User` entity to `UserResponse` (via a registered
 mapper, or reflection fallback) and writes a `201 Created` JSON response.
 
-The `Exec` closure signature is `func(ctx rest.Context, req Req, id any) (any, error)`:
+The pipeline uses 4 generic type parameters: `Create[Req, Params, Entity, Res]`:
+- `Req` - Request DTO (parsed from body)
+- `Params` - Database/service parameters (auto-mapped from Req if no Params() step)
+- `Entity` - Database entity type
+- `Res` - Response DTO
 
-- For `Create`/`Update` with `Bind()`, `req` is the parsed request and `id` is (for
-  `Update`) the route `id` parsed to `int64`.
-- For `Get`/`Delete`, `req` is an empty `struct{}` and `id` is the route `id`
+The `Exec` closure signature is `func(ctx rest.Context, req Req, params Params, id any) (any, error)`:
+
+- For `Create`/`Update`/`Patch` with `Bind()`, `req` is the parsed request DTO and `params` is
+  auto-mapped from `req` (or built via `Params()` step). The `id` is the route parameter
+  parsed to `int64`.
+- For `Get`/`Delete`, `req` and `params` are empty structs and `id` is the route `id`
   automatically read from the `id` path parameter and parsed to `int64`.
 - Return a non-`nil` value to send it as the response body; return `nil` (with a `nil`
   error) when there is no body (e.g. `Delete`).
 
-### Get / Update / Delete
+### Get / Update / Patch / Delete
 
 ```go
 func GetUser(c *fiber.Ctx) error {
 	return rest.
-		Get[struct{}, db.User, UserResponse](FiberContext{Ctx: c}).
-		Exec(func(ctx rest.Context, req struct{}, id any) (any, error) {
+		Get[struct{}, struct{}, db.User, UserResponse](FiberContext{Ctx: c}).
+		Exec(func(ctx rest.Context, req struct{}, params struct{}, id any) (any, error) {
 			return database.GetUser(ctx.Context(), id.(int64))
 		}).
 		Respond()
@@ -175,8 +186,8 @@ func GetUser(c *fiber.Ctx) error {
 
 func GetAllUsers(c *fiber.Ctx) error {
 	return rest.
-		Get[struct{}, []db.User, []UserResponse](FiberContext{Ctx: c}).
-		Exec(func(ctx rest.Context, req struct{}, id any) (any, error) {
+		Get[struct{}, struct{}, []db.User, []UserResponse](FiberContext{Ctx: c}).
+		Exec(func(ctx rest.Context, req struct{}, params struct{}, id any) (any, error) {
 			return database.GetAllUsers(ctx.Context())
 		}).
 		Respond()
@@ -184,24 +195,28 @@ func GetAllUsers(c *fiber.Ctx) error {
 
 func UpdateUser(c *fiber.Ctx) error {
 	return rest.
-		Update[UserRequest, db.User, UserResponse](FiberContext{Ctx: c}).
+		Update[UserRequest, db.UpdateUserParams, db.User, UserResponse](FiberContext{Ctx: c}).
 		Bind().
-		Validate(ValidateUser).
-		Exec(func(ctx rest.Context, req UserRequest, id any) (any, error) {
-			params := db.UpdateUserParams{
-				Username: req.Email,
-				Email:    req.Email,
-				ID:       id.(int64),
-			}
-			return nil, database.UpdateUser(ctx.Context(), params)
+		Exec(func(ctx rest.Context, req UserRequest, params db.UpdateUserParams, id any) (any, error) {
+			return database.UpdateUser(ctx.Context(), params)
+		}).
+		Respond()
+}
+
+func PatchUser(c *fiber.Ctx) error {
+	return rest.
+		Patch[UserRequest, db.UpdateUserParams, db.User, UserResponse](FiberContext{Ctx: c}).
+		Bind().
+		Exec(func(ctx rest.Context, req UserRequest, params db.UpdateUserParams, id any) (any, error) {
+			return database.UpdateUser(ctx.Context(), params)
 		}).
 		Respond()
 }
 
 func DeleteUser(c *fiber.Ctx) error {
 	return rest.
-		Delete[UserResponse](FiberContext{Ctx: c}).
-		Exec(func(ctx rest.Context, req struct{}, id any) (any, error) {
+		Delete[struct{}, struct{}, struct{}, UserResponse](FiberContext{Ctx: c}).
+		Exec(func(ctx rest.Context, req struct{}, params struct{}, id any) (any, error) {
 			return nil, database.DeleteUser(ctx.Context(), id.(int64))
 		}).
 		Respond()
@@ -221,6 +236,9 @@ func init() {
 }
 ```
 
+The `Params` type is automatically mapped from `Req` using reflection if no explicit
+`Params()` step is provided. Field names must match between `Req` and `Params` types.
+
 ### Wiring it up (Fiber)
 
 This is the real entry point from [`examples/fiber/main.go`](examples/fiber/main.go):
@@ -231,7 +249,7 @@ func main() {
     if err != nil {
         logger.Crit("Failed to connect to database: %v", err)
     }
-    handlers.SetDatabase(db.Queries)
+    handlers.New(db.Queries)
 
     app := fiber.New()
 
@@ -248,6 +266,8 @@ func main() {
     app.Patch("/users/:id", handlers.UpdateUser)
     app.Delete("/users/:id", handlers.DeleteUser)
 
+    app.Get("/test", handlers.TestResponse)
+
     logger.Info("Server started on :3000")
     log.Fatal(app.Listen(":3000"))
 }
@@ -258,29 +278,34 @@ func main() {
 ### 🚦 Pipeline (top-level `rest` package)
 
 The REST pipeline orchestrates the full request lifecycle using only the `Context`
-interface. `Create`, `Get`, `Update`, `Delete` start a pipeline; `Bind`, `Validate`,
-`Exec`, `Respond` drive it.
+interface. `Create`, `Get`, `Update`, `Patch`, `Delete` start a pipeline; `Bind`, `Validate`,
+`Params`, `Exec`, `Respond` drive it.
 
 ```go
 // Generic constructors exposed by the rest package:
-rest.Create[Req, Entity, Res](ctx)   // status 201
-rest.Get[Req, Entity, Res](ctx)      // status 200
-rest.Update[Req, Entity, Res](ctx)   // status 200
-rest.Delete[Res](ctx)                // status 204
+rest.Create[Req, Params, Entity, Res](ctx)   // status 201
+rest.Get[Req, Params, Entity, Res](ctx)      // status 200
+rest.Update[Req, Params, Entity, Res](ctx)   // status 200
+rest.Patch[Req, Params, Entity, Res](ctx)    // status 200
+rest.Delete[Req, Params, Entity, Res](ctx)   // status 204
 
 // Fluent steps:
-pipeline.Bind()                      // parse the request body into Req
-pipeline.Validate(func(Req) error)  // run validation
-pipeline.Exec(func(ctx, Req, id any) (any, error)) // run business logic
-pipeline.Respond()                   // map Entity -> Res and write JSON
+pipeline.Bind()                             // parse the request body into Req
+pipeline.Validate(func(Req) error)         // run validation
+pipeline.Params(func(Req) Params)          // build params from request (optional)
+pipeline.Exec(func(ctx, Req, Params, id any) (any, error)) // run business logic
+pipeline.Respond()                          // map Entity -> Res and write JSON
 ```
 
-Status codes are chosen automatically: `Create → 201`, `Get`/`Update → 200`,
+Status codes are chosen automatically: `Create → 201`, `Get`/`Update`/`Patch → 200`,
 `Delete → 204`. The value returned by `Exec` is mapped to the response DTO by the
 registered mapper (or reflection fallback) inside `Respond()`.
 
-For `Get`, `Update`, and `Delete` the route `id` is read automatically from the `id`
+For `Get`, `Update`, `Patch`, and `Delete` the route `id` is read automatically from the `id`
 path parameter and parsed to `int64` before `Exec` is called.
+
+The `Params` type is automatically mapped from `Req` using reflection if no explicit
+`Params()` step is provided. You can also use `Params()` to build params manually.
 
 The following types and helpers are re-exported by the top-level `rest` package:
 
@@ -288,12 +313,14 @@ The following types and helpers are re-exported by the top-level `rest` package:
 type Context = context.Context
 type Handler[Req, Entity] = pipeline.Handler[Req, Entity]
 type ExecHandler[Req] = pipeline.ExecHandler[Req]
-type Pipeline[Req, Entity, Res] = pipeline.Pipeline[Req, Entity, Res]
+type PatchHandler[Req, Params] = pipeline.PatchHandler[Req, Params]
+type Pipeline[Req, Params, Entity, Res] = pipeline.Pipeline[Req, Params, Entity, Res]
 
-func Create[Req, Entity, Res](ctx Context) *Pipeline[Req, Entity, Res]
-func Get[Req, Entity, Res](ctx Context) *Pipeline[Req, Entity, Res]
-func Update[Req, Entity, Res](ctx Context) *Pipeline[Req, Entity, Res]
-func Delete[Res](ctx Context) *Pipeline[struct{}, struct{}, Res]
+func Create[Req, Params, Entity, Res](ctx Context) *Pipeline[Req, Params, Entity, Res]
+func Get[Req, Params, Entity, Res](ctx Context) *Pipeline[Req, Params, Entity, Res]
+func Update[Req, Params, Entity, Res](ctx Context) *Pipeline[Req, Params, Entity, Res]
+func Patch[Req, Params, Entity, Res](ctx Context) *Pipeline[Req, Params, Entity, Res]
+func Delete[Req, Params, Entity, Res](ctx Context) *Pipeline[Req, Params, Entity, Res]
 
 func Register[Src, Dst](fn func(Src) Dst)
 func Validate() *validator.Validator
@@ -377,7 +404,7 @@ detail, and (when built) file/line/function for debugging.
 
 ### ✅ Validator (`github.com/otmc-sw/rest/validator`)
 
-Fluent validation helpers — independent from HTTP. Also re-exported as `rest.Validate()`.
+Fluent validation helpers — independent from HTTP. Also re-exported as `rest.Validator()`.
 
 ```go
 import "github.com/otmc-sw/rest/validator"
@@ -521,7 +548,7 @@ type Context interface {
 Easy to learn and use.
 
 ```go
-return rest.Create[Req, Entity, Res](ctx).Bind().Validate(validate).Exec(service).Respond()
+return rest.Create[Req, Params, Entity, Res](ctx).Bind().Validate(validate).Exec(service).Respond()
 ```
 
 ### 🔗 Fluent API
@@ -530,7 +557,7 @@ Everything supports method chaining with generic type safety.
 
 ```go
 return rest.
-    Update[UpdateDocumentRequest, Document, DocumentResponse](ctx).
+    Update[UpdateDocumentRequest, UpdateParams, Document, DocumentResponse](ctx).
     Bind().
     Validate(ValidateDocument).
     Exec(updateDocument).
