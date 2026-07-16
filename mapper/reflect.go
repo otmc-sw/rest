@@ -105,6 +105,11 @@ func convertAndSet(dstField, srcField reflect.Value) error {
 		srcType = elemType
 	}
 
+	if srcType.AssignableTo(dstType) {
+		dstField.Set(srcField)
+		return nil
+	}
+
 	if srcType.Kind() == reflect.Int64 && dstType.Kind() == reflect.String {
 		dstField.SetString(strconv.FormatInt(srcField.Int(), 10))
 		return nil
