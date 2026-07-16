@@ -18,7 +18,7 @@ type UserRequest struct {
 	Username *string          `json:"username"`
 	FullName *string          `json:"full_name,omitempty"`
 	Email    *string          `json:"email"`
-	Enabled  *bool            `json:enabled`
+	Enabled  *bool            `json:"enabled"`
 	TestInt  *int64           `json:"test_int"`
 	Content  *json.RawMessage `json:"content,omitempty"`
 }
