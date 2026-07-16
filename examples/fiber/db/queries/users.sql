@@ -1,5 +1,5 @@
 -- name: CreateUser :one
-INSERT INTO users (username, full_name, email, content) VALUES (?, ?, ?, ?)
+INSERT INTO users (username, full_name, email, enabled, test_int, content) VALUES (?, ?, ?, ?, ?, ?)
 RETURNING *;
 
 -- name: GetUser :one

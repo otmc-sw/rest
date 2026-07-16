@@ -15,9 +15,11 @@ POST {{baseUrl}}/users
 Content-Type: application/json
 
 {
-  "username": "trung",
-  "email": "trung@otmc.com.vn",
-  "content": "{\"key\": \"value\"}"
+  "username": "trung_{{$timestamp}}",
+  "email": "trung_{{$timestamp}}@otmc.com.vn",
+  "content": "{\"key\": \"value\"}",
+  "enabled": true,
+  "test_int": 34132
 }
 
 ### Update a user (valid)

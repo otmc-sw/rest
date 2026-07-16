@@ -12,6 +12,8 @@ function generateTestUser(overrides?: {
   username?: string;
   email?: string;
   fullName?: string;
+  enabled?: boolean;
+  testInt?: number;
   content?: object;
 }) {
   const timestamp = Date.now();
@@ -19,6 +21,8 @@ function generateTestUser(overrides?: {
     username: overrides?.username || `testuser_${timestamp}`,
     email: overrides?.email || `test_${timestamp}@example.com`,
     full_name: overrides?.fullName || `Test User ${timestamp}`,
+    enabled: overrides?.enabled ?? true,
+    test_int: overrides?.testInt ?? 42,
     content: overrides?.content || {
       preferences: {
         theme: 'dark',
@@ -62,6 +66,8 @@ test.describe('Users API', () => {
     expect(user).toHaveProperty('username');
     expect(user).toHaveProperty('email');
     expect(user).toHaveProperty('full_name');
+    expect(user).toHaveProperty('enabled');
+    expect(user).toHaveProperty('test_int');
     expect(user).toHaveProperty('created_at');
     expect(user).toHaveProperty('updated_at');
     
@@ -75,6 +81,8 @@ test.describe('Users API', () => {
       username: 'complete_user',
       email: 'complete@example.com',
       full_name: 'Complete Test User',
+      enabled: true,
+      test_int: 100,
       content: {
         address: '123 Test St',
         phone: '123-456-7890',
@@ -131,6 +139,8 @@ test.describe('Users API', () => {
     expect(user).toHaveProperty('username', newUser.username);
     expect(user).toHaveProperty('email', newUser.email);
     expect(user).toHaveProperty('full_name', newUser.full_name);
+    expect(user).toHaveProperty('enabled');
+    expect(user).toHaveProperty('test_int');
     expect(user).toHaveProperty('created_at');
     expect(user).toHaveProperty('updated_at');
   });
@@ -373,6 +383,8 @@ test.describe('Users API', () => {
       username: 'content_user',
       email: 'content@example.com',
       full_name: 'Content User',
+      enabled: false,
+      test_int: 999,
       content: {
         settings: {
           theme: 'light',

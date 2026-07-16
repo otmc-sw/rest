@@ -11,7 +11,7 @@ import (
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (username, full_name, email, content) VALUES (?, ?, ?, ?)
+INSERT INTO users (username, full_name, email, enabled, test_int, content) VALUES (?, ?, ?, ?, ?, ?)
 RETURNING id, username, full_name, email, enabled, content, test_int, created_at, updated_at
 `
 
@@ -19,6 +19,8 @@ type CreateUserParams struct {
 	Username string         `json:"username"`
 	FullName sql.NullString `json:"full_name"`
 	Email    string         `json:"email"`
+	Enabled  sql.NullBool   `json:"enabled"`
+	TestInt  sql.NullInt64  `json:"test_int"`
 	Content  sql.NullString `json:"content"`
 }
 
@@ -27,6 +29,8 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		arg.Username,
 		arg.FullName,
 		arg.Email,
+		arg.Enabled,
+		arg.TestInt,
 		arg.Content,
 	)
 	var i User
