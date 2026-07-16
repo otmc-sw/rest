@@ -3,7 +3,9 @@ CREATE TABLE users (
     username TEXT NOT NULL UNIQUE,
     full_name TEXT,
     email TEXT NOT NULL UNIQUE,
+    enabled BOOLEAN DEFAULT TRUE,
     content TEXT,
+    test_int INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

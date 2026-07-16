@@ -3,10 +3,10 @@ INSERT INTO users (username, full_name, email, content) VALUES (?, ?, ?, ?)
 RETURNING *;
 
 -- name: GetUser :one
-SELECT id, username, full_name, email, content, created_at, updated_at FROM users WHERE id = ?;
+SELECT id, username, full_name, email, enabled, content, test_int, created_at, updated_at FROM users WHERE id = ?;
 
 -- name: GetAllUsers :many
-SELECT id, username, full_name, email, content, created_at, updated_at FROM users;
+SELECT id, username, full_name, email, enabled, content, test_int, created_at, updated_at FROM users;
 
 -- name: UpdateUser :one
 UPDATE users
@@ -23,4 +23,4 @@ RETURNING *;
 DELETE FROM users WHERE id = ?;
 
 -- name: ListUsers :many
-SELECT id, username, full_name, email, content, created_at, updated_at FROM users;
+SELECT id, username, full_name, email, enabled, content, test_int, created_at, updated_at FROM users;

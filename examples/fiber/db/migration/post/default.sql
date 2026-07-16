@@ -8,5 +8,5 @@
 -- ======================================================================
 
 -- Insert default user
-INSERT OR IGNORE INTO users (username, full_name, email) VALUES
-  ('admin', 'Admin User', 'admin@example.com');
+INSERT OR IGNORE INTO users (username, full_name, email, enabled, test_int) VALUES
+  ('admin', 'Admin User', 'admin@example.com', 1, 42);

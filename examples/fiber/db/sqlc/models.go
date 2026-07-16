@@ -13,7 +13,9 @@ type User struct {
 	Username  string         `json:"username"`
 	FullName  sql.NullString `json:"full_name"`
 	Email     string         `json:"email"`
+	Enabled   sql.NullBool   `json:"enabled"`
 	Content   sql.NullString `json:"content"`
+	TestInt   sql.NullInt64  `json:"test_int"`
 	CreatedAt sql.NullTime   `json:"created_at"`
 	UpdatedAt sql.NullTime   `json:"updated_at"`
 }

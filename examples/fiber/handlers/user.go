@@ -18,6 +18,8 @@ type UserRequest struct {
 	Username *string          `json:"username"`
 	FullName *string          `json:"full_name,omitempty"`
 	Email    *string          `json:"email"`
+	Enabled  *bool            `json:enabled`
+	TestInt  *int64           `json:"test_int"`
 	Content  *json.RawMessage `json:"content,omitempty"`
 }
 
@@ -26,6 +28,8 @@ type UserResponse struct {
 	Username  string      `json:"username"`
 	FullName  string      `json:"full_name,omitempty"`
 	Email     string      `json:"email"`
+	Enabled   bool        `json:"enabled"`
+	TestInt   int64       `json:"test_int"`
 	Content   interface{} `json:"content,omitempty"`
 	CreatedAt time.Time   `json:"created_at"`
 	UpdatedAt time.Time   `json:"updated_at"`

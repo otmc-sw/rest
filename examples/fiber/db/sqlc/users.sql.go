@@ -12,7 +12,7 @@ import (
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (username, full_name, email, content) VALUES (?, ?, ?, ?)
-RETURNING id, username, full_name, email, content, created_at, updated_at
+RETURNING id, username, full_name, email, enabled, content, test_int, created_at, updated_at
 `
 
 type CreateUserParams struct {
@@ -35,7 +35,9 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Username,
 		&i.FullName,
 		&i.Email,
+		&i.Enabled,
 		&i.Content,
+		&i.TestInt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -52,7 +54,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 }
 
 const getAllUsers = `-- name: GetAllUsers :many
-SELECT id, username, full_name, email, content, created_at, updated_at FROM users
+SELECT id, username, full_name, email, enabled, content, test_int, created_at, updated_at FROM users
 `
 
 func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
@@ -69,7 +71,9 @@ func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
 			&i.Username,
 			&i.FullName,
 			&i.Email,
+			&i.Enabled,
 			&i.Content,
+			&i.TestInt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -87,7 +91,7 @@ func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, username, full_name, email, content, created_at, updated_at FROM users WHERE id = ?
+SELECT id, username, full_name, email, enabled, content, test_int, created_at, updated_at FROM users WHERE id = ?
 `
 
 func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
@@ -98,7 +102,9 @@ func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
 		&i.Username,
 		&i.FullName,
 		&i.Email,
+		&i.Enabled,
 		&i.Content,
+		&i.TestInt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -106,7 +112,7 @@ func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, username, full_name, email, content, created_at, updated_at FROM users
+SELECT id, username, full_name, email, enabled, content, test_int, created_at, updated_at FROM users
 `
 
 func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
@@ -123,7 +129,9 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 			&i.Username,
 			&i.FullName,
 			&i.Email,
+			&i.Enabled,
 			&i.Content,
+			&i.TestInt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -149,7 +157,7 @@ SET
     content = COALESCE(?4, content),
     updated_at = CURRENT_TIMESTAMP
 WHERE id = ?5
-RETURNING id, username, full_name, email, content, created_at, updated_at
+RETURNING id, username, full_name, email, enabled, content, test_int, created_at, updated_at
 `
 
 type UpdateUserParams struct {
@@ -174,7 +182,9 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.Username,
 		&i.FullName,
 		&i.Email,
+		&i.Enabled,
 		&i.Content,
+		&i.TestInt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
