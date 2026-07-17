@@ -62,7 +62,7 @@ func copyStructFields(src, dst interface{}) {
 						dstField.Set(elem)
 						continue
 					}
-					if elemType.Kind() == reflect.Struct && dstField.Kind() == reflect.Struct {
+					if elemType.Kind() == reflect.Struct && dstField.Kind() == reflect.Struct && !isNullType(dstField.Type()) {
 						newDst := reflect.New(dstField.Type()).Interface()
 						copyStructFields(elem.Interface(), newDst)
 						dstField.Set(reflect.ValueOf(newDst).Elem())
