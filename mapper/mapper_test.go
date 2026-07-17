@@ -356,3 +356,54 @@ func TestMapNullStringToJSON(t *testing.T) {
 		t.Fatalf("expected json.RawMessage, got %v", string(dst.Data))
 	}
 }
+
+func TestMapNullStringToStringSlice(t *testing.T) {
+	type Src struct {
+		Data string
+	}
+
+	type Dst struct {
+		Data []string
+	}
+
+	src := Src{Data: `["a","b"]`}
+	dst := Map[Dst, Src](src)
+
+	if len(dst.Data) != 2 || dst.Data[0] != "a" || dst.Data[1] != "b" {
+		t.Fatalf("expected []string, got %v", dst.Data)
+	}
+}
+
+func TestMapNullStringToIntSlice(t *testing.T) {
+	type Src struct {
+		Data string
+	}
+
+	type Dst struct {
+		Data []int
+	}
+
+	src := Src{Data: `[1,2,3]`}
+	dst := Map[Dst, Src](src)
+
+	if len(dst.Data) != 3 || dst.Data[0] != 1 || dst.Data[2] != 3 {
+		t.Fatalf("expected []int, got %v", dst.Data)
+	}
+}
+
+func TestMapNullStringToStringMap(t *testing.T) {
+	type Src struct {
+		Data string
+	}
+
+	type Dst struct {
+		Data map[string]int
+	}
+
+	src := Src{Data: `{"k1":1,"k2":2}`}
+	dst := Map[Dst, Src](src)
+
+	if dst.Data["k1"] != 1 || dst.Data["k2"] != 2 {
+		t.Fatalf("expected map, got %v", dst.Data)
+	}
+}

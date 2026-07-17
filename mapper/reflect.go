@@ -325,6 +325,14 @@ func convertNullTypes(dstField, srcField reflect.Value) error {
 			}
 		}
 		setZeroValue(dstField)
+	case srcType == nullStringType && (dstType.Kind() == reflect.Slice || dstType.Kind() == reflect.Map):
+		ns := srcField.Interface().(sql.NullString)
+		if ns.Valid {
+			if err := json.Unmarshal([]byte(ns.String), dstField.Addr().Interface()); err == nil {
+				return nil
+			}
+		}
+		setZeroValue(dstField)
 	default:
 		return fmt.Errorf("unsupported sql.Null conversion")
 	}
