@@ -167,12 +167,22 @@ func convertAndSet(dstField, srcField reflect.Value) error {
 		}
 	}
 
-	if srcType == nullStringType && (dstType.Kind() == reflect.Slice || dstType.Kind() == reflect.Map) {
-		ns := srcField.Interface().(sql.NullString)
-		if ns.Valid {
-			if err := json.Unmarshal([]byte(ns.String), dstField.Addr().Interface()); err == nil {
+	if (srcType == nullStringType || srcType.Kind() == reflect.String) && (dstType.Kind() == reflect.Slice || dstType.Kind() == reflect.Map) {
+		var data string
+		if srcType == nullStringType {
+			ns := srcField.Interface().(sql.NullString)
+			if !ns.Valid {
+				setZeroValue(dstField)
 				return nil
 			}
+			data = ns.String
+		} else {
+			data = srcField.String()
+		}
+		newVal := reflect.New(dstType)
+		if err := json.Unmarshal([]byte(data), newVal.Interface()); err == nil {
+			dstField.Set(newVal.Elem())
+			return nil
 		}
 		setZeroValue(dstField)
 		return nil
