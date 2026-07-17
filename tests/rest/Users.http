@@ -17,9 +17,14 @@ Content-Type: application/json
 {
   "username": "trung_{{$timestamp}}",
   "email": "trung_{{$timestamp}}@otmc.com.vn",
-  "content": "{\"key\": \"value\"}",
+  "content": {"key": "value"},
   "enabled": true,
-  "test_int": 34132
+  "test_int": 34132,
+  "test_string_array": ["string1", "string2"],
+  "test_int_array": [1, 2, 3],
+  "test_map": {"key1": 1, "key2": 2},
+  "test_json": {"nested": {"key": "value"}},
+  "profile": {"bio": "Senior Developer"}
 }
 
 ### Update a user (valid)

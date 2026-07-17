@@ -11,17 +11,34 @@ import (
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (username, full_name, email, enabled, test_int, content) VALUES (?, ?, ?, ?, ?, ?)
-RETURNING id, username, full_name, email, enabled, content, test_int, created_at, updated_at
+INSERT INTO users (
+    username, 
+    full_name, 
+    email, 
+    enabled, 
+    test_int, 
+    content, 
+    test_string_array, 
+    test_int_array, 
+    test_map, 
+    test_json, 
+    profile
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id, username, full_name, email, enabled, content, test_int, test_string_array, test_int_array, test_map, test_json, profile, created_at, updated_at
 `
 
 type CreateUserParams struct {
-	Username string         `json:"username"`
-	FullName sql.NullString `json:"full_name"`
-	Email    string         `json:"email"`
-	Enabled  sql.NullBool   `json:"enabled"`
-	TestInt  sql.NullInt64  `json:"test_int"`
-	Content  sql.NullString `json:"content"`
+	Username        string         `json:"username"`
+	FullName        sql.NullString `json:"full_name"`
+	Email           string         `json:"email"`
+	Enabled         sql.NullBool   `json:"enabled"`
+	TestInt         sql.NullInt64  `json:"test_int"`
+	Content         sql.NullString `json:"content"`
+	TestStringArray sql.NullString `json:"test_string_array"`
+	TestIntArray    sql.NullString `json:"test_int_array"`
+	TestMap         sql.NullString `json:"test_map"`
+	TestJson        sql.NullString `json:"test_json"`
+	Profile         sql.NullString `json:"profile"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
@@ -32,6 +49,11 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		arg.Enabled,
 		arg.TestInt,
 		arg.Content,
+		arg.TestStringArray,
+		arg.TestIntArray,
+		arg.TestMap,
+		arg.TestJson,
+		arg.Profile,
 	)
 	var i User
 	err := row.Scan(
@@ -42,6 +64,11 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Enabled,
 		&i.Content,
 		&i.TestInt,
+		&i.TestStringArray,
+		&i.TestIntArray,
+		&i.TestMap,
+		&i.TestJson,
+		&i.Profile,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -58,7 +85,22 @@ func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 }
 
 const getAllUsers = `-- name: GetAllUsers :many
-SELECT id, username, full_name, email, enabled, content, test_int, created_at, updated_at FROM users
+SELECT 
+id, 
+username, 
+full_name, 
+email, 
+enabled, 
+content, 
+test_int, 
+test_string_array, 
+test_int_array, 
+test_map, 
+test_json, 
+profile, 
+created_at, 
+updated_at 
+FROM users
 `
 
 func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
@@ -78,6 +120,11 @@ func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
 			&i.Enabled,
 			&i.Content,
 			&i.TestInt,
+			&i.TestStringArray,
+			&i.TestIntArray,
+			&i.TestMap,
+			&i.TestJson,
+			&i.Profile,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -95,7 +142,22 @@ func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, username, full_name, email, enabled, content, test_int, created_at, updated_at FROM users WHERE id = ?
+SELECT 
+id, 
+username, 
+full_name, 
+email, 
+enabled, 
+content, 
+test_int, 
+test_string_array, 
+test_int_array, 
+test_map, 
+test_json, 
+profile, 
+created_at, 
+updated_at 
+FROM users WHERE id = ?
 `
 
 func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
@@ -109,6 +171,11 @@ func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
 		&i.Enabled,
 		&i.Content,
 		&i.TestInt,
+		&i.TestStringArray,
+		&i.TestIntArray,
+		&i.TestMap,
+		&i.TestJson,
+		&i.Profile,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -116,7 +183,22 @@ func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, username, full_name, email, enabled, content, test_int, created_at, updated_at FROM users
+SELECT 
+id, 
+username, 
+full_name, 
+email, 
+enabled, 
+content, 
+test_int, 
+test_string_array, 
+test_int_array, 
+test_map, 
+test_json, 
+profile, 
+created_at, 
+updated_at 
+FROM users
 `
 
 func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
@@ -136,6 +218,11 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 			&i.Enabled,
 			&i.Content,
 			&i.TestInt,
+			&i.TestStringArray,
+			&i.TestIntArray,
+			&i.TestMap,
+			&i.TestJson,
+			&i.Profile,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -159,17 +246,29 @@ SET
     full_name = COALESCE(?2, full_name),
     email = COALESCE(?3, email),
     content = COALESCE(?4, content),
+    test_int = COALESCE(?5, test_int),
+    test_string_array = COALESCE(?6, test_string_array),
+    test_int_array = COALESCE(?7, test_int_array),
+    test_map = COALESCE(?8, test_map),
+    test_json = COALESCE(?9, test_json),
+    profile = COALESCE(?10, profile),
     updated_at = CURRENT_TIMESTAMP
-WHERE id = ?5
-RETURNING id, username, full_name, email, enabled, content, test_int, created_at, updated_at
+WHERE id = ?11
+RETURNING id, username, full_name, email, enabled, content, test_int, test_string_array, test_int_array, test_map, test_json, profile, created_at, updated_at
 `
 
 type UpdateUserParams struct {
-	Username sql.NullString `json:"username"`
-	FullName sql.NullString `json:"full_name"`
-	Email    sql.NullString `json:"email"`
-	Content  sql.NullString `json:"content"`
-	ID       int64          `json:"id"`
+	Username        sql.NullString `json:"username"`
+	FullName        sql.NullString `json:"full_name"`
+	Email           sql.NullString `json:"email"`
+	Content         sql.NullString `json:"content"`
+	TestInt         sql.NullInt64  `json:"test_int"`
+	TestStringArray sql.NullString `json:"test_string_array"`
+	TestIntArray    sql.NullString `json:"test_int_array"`
+	TestMap         sql.NullString `json:"test_map"`
+	TestJson        sql.NullString `json:"test_json"`
+	Profile         sql.NullString `json:"profile"`
+	ID              int64          `json:"id"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
@@ -178,6 +277,12 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		arg.FullName,
 		arg.Email,
 		arg.Content,
+		arg.TestInt,
+		arg.TestStringArray,
+		arg.TestIntArray,
+		arg.TestMap,
+		arg.TestJson,
+		arg.Profile,
 		arg.ID,
 	)
 	var i User
@@ -189,6 +294,11 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.Enabled,
 		&i.Content,
 		&i.TestInt,
+		&i.TestStringArray,
+		&i.TestIntArray,
+		&i.TestMap,
+		&i.TestJson,
+		&i.Profile,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

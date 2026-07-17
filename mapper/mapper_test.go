@@ -6,6 +6,7 @@
 package mapper
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 )
@@ -38,7 +39,7 @@ func TestMapPointerStringToStringNil(t *testing.T) {
 	}
 
 	src := Src{Name: nil}
-	dst := Map[Dst](src)
+	dst := Map[Dst, Src](src)
 
 	if dst.Name != "" {
 		t.Fatalf("expected Name='', got %v", dst.Name)
@@ -302,5 +303,56 @@ func TestMapStructToStructNil(t *testing.T) {
 
 	if dst.User.Name != "" {
 		t.Fatalf("expected User.Name='', got %v", dst.User.Name)
+	}
+}
+
+func TestMapCollectionToNullString(t *testing.T) {
+	type Src struct {
+		Tags []string
+	}
+
+	type Dst struct {
+		Tags string
+	}
+
+	src := Src{Tags: []string{"go", "rest"}}
+	dst := Map[Dst, Src](src)
+
+	if dst.Tags == "" {
+		t.Fatalf("expected Tags JSON string, got empty")
+	}
+}
+
+func TestMapJSONToNullString(t *testing.T) {
+	type Src struct {
+		Data json.RawMessage
+	}
+
+	type Dst struct {
+		Data string
+	}
+
+	src := Src{Data: json.RawMessage(`{"key":"value"}`)}
+	dst := Map[Dst, Src](src)
+
+	if dst.Data == "" {
+		t.Fatalf("expected Data JSON string, got empty")
+	}
+}
+
+func TestMapNullStringToJSON(t *testing.T) {
+	type Src struct {
+		Data string
+	}
+
+	type Dst struct {
+		Data json.RawMessage
+	}
+
+	src := Src{Data: `{"key":"value"}`}
+	dst := Map[Dst, Src](src)
+
+	if string(dst.Data) != `{"key":"value"}` {
+		t.Fatalf("expected json.RawMessage, got %v", string(dst.Data))
 	}
 }

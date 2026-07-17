@@ -14,25 +14,43 @@ import (
 	db "github.com/otmc-sw/rest/examples/fiber/db/sqlc"
 )
 
+type ProfileResponse struct {
+	Bio string `json:"bio,omitempty"`
+}
+
 type UserRequest struct {
-	Username *string          `json:"username"`
-	FullName *string          `json:"full_name,omitempty"`
-	Email    *string          `json:"email"`
-	Enabled  *bool            `json:"enabled"`
-	TestInt  *int64           `json:"test_int"`
-	Content  *json.RawMessage `json:"content,omitempty"`
+	Username        *string          `json:"username"`
+	FullName        *string          `json:"full_name,omitempty"`
+	Email           *string          `json:"email"`
+	Enabled         *bool            `json:"enabled"`
+	TestInt         *int64           `json:"test_int"`
+	Content         *json.RawMessage `json:"content,omitempty"`
+	TestStringArray *[]string        `json:"test_string_array,omitempty"`
+	TestIntArray    *[]int           `json:"test_int_array,omitempty"`
+	TestMap         *map[string]int  `json:"test_map,omitempty"`
+	TestJson        *json.RawMessage `json:"test_json,omitempty"`
+	Profile         *ProfileRequest  `json:"profile"`
+}
+
+type ProfileRequest struct {
+	Bio string `json:"bio,omitempty"`
 }
 
 type UserResponse struct {
-	ID        int64       `json:"id"`
-	Username  string      `json:"username"`
-	FullName  string      `json:"full_name,omitempty"`
-	Email     string      `json:"email"`
-	Enabled   bool        `json:"enabled"`
-	TestInt   int64       `json:"test_int"`
-	Content   interface{} `json:"content,omitempty"`
-	CreatedAt time.Time   `json:"created_at"`
-	UpdatedAt time.Time   `json:"updated_at"`
+	ID              int64           `json:"id"`
+	Username        string          `json:"username"`
+	FullName        string          `json:"full_name,omitempty"`
+	Email           string          `json:"email"`
+	Enabled         bool            `json:"enabled"`
+	TestInt         int64           `json:"test_int"`
+	Content         json.RawMessage `json:"content,omitempty"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
+	TestStringArray []string        `json:"test_string_array,omitempty"`
+	TestIntArray    []int           `json:"test_int_array,omitempty"`
+	TestMap         map[string]int  `json:"test_map,omitempty"`
+	TestJson        json.RawMessage `json:"test_json,omitempty"`
+	Profile         ProfileResponse `json:"profile"`
 }
 
 func ValidateUser(r UserRequest) error {

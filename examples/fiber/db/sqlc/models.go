@@ -9,13 +9,18 @@ import (
 )
 
 type User struct {
-	ID        int64          `json:"id"`
-	Username  string         `json:"username"`
-	FullName  sql.NullString `json:"full_name"`
-	Email     string         `json:"email"`
-	Enabled   sql.NullBool   `json:"enabled"`
-	Content   sql.NullString `json:"content"`
-	TestInt   sql.NullInt64  `json:"test_int"`
-	CreatedAt sql.NullTime   `json:"created_at"`
-	UpdatedAt sql.NullTime   `json:"updated_at"`
+	ID              int64          `json:"id"`
+	Username        string         `json:"username"`
+	FullName        sql.NullString `json:"full_name"`
+	Email           string         `json:"email"`
+	Enabled         sql.NullBool   `json:"enabled"`
+	Content         sql.NullString `json:"content"`
+	TestInt         sql.NullInt64  `json:"test_int"`
+	TestStringArray sql.NullString `json:"test_string_array"`
+	TestIntArray    sql.NullString `json:"test_int_array"`
+	TestMap         sql.NullString `json:"test_map"`
+	TestJson        sql.NullString `json:"test_json"`
+	Profile         sql.NullString `json:"profile"`
+	CreatedAt       sql.NullTime   `json:"created_at"`
+	UpdatedAt       sql.NullTime   `json:"updated_at"`
 }

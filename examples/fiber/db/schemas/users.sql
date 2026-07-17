@@ -6,6 +6,11 @@ CREATE TABLE users (
     enabled BOOLEAN DEFAULT TRUE,
     content TEXT,
     test_int INTEGER,
+    test_string_array TEXT,
+    test_int_array TEXT,
+    test_map TEXT,
+    test_json TEXT,
+    profile TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

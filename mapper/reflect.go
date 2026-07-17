@@ -51,26 +51,26 @@ func copyStructFields(src, dst interface{}) {
 				dstIsNull := isNullType(dstField.Type())
 				if srcFieldVal.Type().AssignableTo(dstField.Type()) && (!srcIsNull || dstIsNull) {
 					dstField.Set(srcFieldVal)
-			} else if srcFieldVal.Kind() == reflect.Ptr {
-				if srcFieldVal.IsNil() {
-					setZeroValue(dstField)
-					continue
-				}
-				elem := srcFieldVal.Elem()
-				elemType := elem.Type()
-				if elemType.AssignableTo(dstField.Type()) {
-					dstField.Set(elem)
-					continue
-				}
-				if elemType.Kind() == reflect.Struct && dstField.Kind() == reflect.Struct {
-					newDst := reflect.New(dstField.Type()).Interface()
-					copyStructFields(elem.Interface(), newDst)
-					dstField.Set(reflect.ValueOf(newDst).Elem())
-					continue
-				}
-				if err := convertAndSet(dstField, elem); err == nil {
-					continue
-				}
+				} else if srcFieldVal.Kind() == reflect.Ptr {
+					if srcFieldVal.IsNil() {
+						setZeroValue(dstField)
+						continue
+					}
+					elem := srcFieldVal.Elem()
+					elemType := elem.Type()
+					if elemType.AssignableTo(dstField.Type()) {
+						dstField.Set(elem)
+						continue
+					}
+					if elemType.Kind() == reflect.Struct && dstField.Kind() == reflect.Struct {
+						newDst := reflect.New(dstField.Type()).Interface()
+						copyStructFields(elem.Interface(), newDst)
+						dstField.Set(reflect.ValueOf(newDst).Elem())
+						continue
+					}
+					if err := convertAndSet(dstField, elem); err == nil {
+						continue
+					}
 				} else if err := convertAndSet(dstField, srcFieldVal); err == nil {
 				}
 			}
@@ -93,6 +93,14 @@ func setZeroValue(field reflect.Value) {
 	case reflect.Slice, reflect.Map:
 		field.Clear()
 	}
+}
+
+func marshalToString(v reflect.Value) (string, error) {
+	b, err := json.Marshal(v.Interface())
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }
 
 func convertAndSet(dstField, srcField reflect.Value) error {
@@ -147,6 +155,23 @@ func convertAndSet(dstField, srcField reflect.Value) error {
 		return nil
 	}
 
+	if srcType == jsonRawMessageType {
+		if dstType.Kind() == reflect.String {
+			dstField.SetString(string(srcField.Interface().(json.RawMessage)))
+			return nil
+		}
+		if dstType == nullStringType {
+			s := string(srcField.Interface().(json.RawMessage))
+			dstField.Set(reflect.ValueOf(sql.NullString{String: s, Valid: s != ""}))
+			return nil
+		}
+	}
+
+	if dstType == jsonRawMessageType && srcType.Kind() == reflect.String {
+		dstField.Set(reflect.ValueOf(json.RawMessage(srcField.String())))
+		return nil
+	}
+
 	if srcType.Kind() == reflect.Int64 && dstType.Kind() == reflect.String {
 		dstField.SetString(strconv.FormatInt(srcField.Int(), 10))
 		return nil
@@ -177,6 +202,18 @@ func convertAndSet(dstField, srcField reflect.Value) error {
 
 	if err := convertNullTypes(dstField, srcField); err == nil {
 		return nil
+	}
+
+	if dstType == nullStringType || dstType.Kind() == reflect.String {
+		s, err := marshalToString(srcField)
+		if err == nil {
+			if dstType == nullStringType {
+				dstField.Set(reflect.ValueOf(sql.NullString{String: s, Valid: s != ""}))
+			} else {
+				dstField.SetString(s)
+			}
+			return nil
+		}
 	}
 
 	return fmt.Errorf("cannot convert %v to %v", srcType, dstType)
@@ -268,6 +305,26 @@ func convertNullTypes(dstField, srcField reflect.Value) error {
 		} else {
 			dstField.Set(reflect.ValueOf(sql.NullString{Valid: false}))
 		}
+	case srcType == nullStringType && dstType == jsonRawMessageType:
+		ns := srcField.Interface().(sql.NullString)
+		if ns.Valid {
+			dstField.Set(reflect.ValueOf(json.RawMessage(ns.String)))
+		} else {
+			dstField.Set(reflect.ValueOf(json.RawMessage(nil)))
+		}
+	case srcType == nullStringType && dstType.Kind() == reflect.Struct:
+		ns := srcField.Interface().(sql.NullString)
+		if ns.Valid {
+			var out interface{}
+			if err := json.Unmarshal([]byte(ns.String), &out); err == nil {
+				newDst := reflect.New(dstType).Interface()
+				if err := json.Unmarshal([]byte(ns.String), newDst); err == nil {
+					dstField.Set(reflect.ValueOf(newDst).Elem())
+					return nil
+				}
+			}
+		}
+		setZeroValue(dstField)
 	default:
 		return fmt.Errorf("unsupported sql.Null conversion")
 	}
