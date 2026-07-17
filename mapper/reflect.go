@@ -51,10 +51,47 @@ func copyStructFields(src, dst interface{}) {
 				dstIsNull := isNullType(dstField.Type())
 				if srcFieldVal.Type().AssignableTo(dstField.Type()) && (!srcIsNull || dstIsNull) {
 					dstField.Set(srcFieldVal)
+			} else if srcFieldVal.Kind() == reflect.Ptr {
+				if srcFieldVal.IsNil() {
+					setZeroValue(dstField)
+					continue
+				}
+				elem := srcFieldVal.Elem()
+				elemType := elem.Type()
+				if elemType.AssignableTo(dstField.Type()) {
+					dstField.Set(elem)
+					continue
+				}
+				if elemType.Kind() == reflect.Struct && dstField.Kind() == reflect.Struct {
+					newDst := reflect.New(dstField.Type()).Interface()
+					copyStructFields(elem.Interface(), newDst)
+					dstField.Set(reflect.ValueOf(newDst).Elem())
+					continue
+				}
+				if err := convertAndSet(dstField, elem); err == nil {
+					continue
+				}
 				} else if err := convertAndSet(dstField, srcFieldVal); err == nil {
 				}
 			}
 		}
+	}
+}
+
+func setZeroValue(field reflect.Value) {
+	switch field.Kind() {
+	case reflect.String:
+		field.SetString("")
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		field.SetInt(0)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		field.SetUint(0)
+	case reflect.Float32, reflect.Float64:
+		field.SetFloat(0)
+	case reflect.Bool:
+		field.SetBool(false)
+	case reflect.Slice, reflect.Map:
+		field.Clear()
 	}
 }
 
