@@ -167,6 +167,17 @@ func convertAndSet(dstField, srcField reflect.Value) error {
 		}
 	}
 
+	if srcType == nullStringType && (dstType.Kind() == reflect.Slice || dstType.Kind() == reflect.Map) {
+		ns := srcField.Interface().(sql.NullString)
+		if ns.Valid {
+			if err := json.Unmarshal([]byte(ns.String), dstField.Addr().Interface()); err == nil {
+				return nil
+			}
+		}
+		setZeroValue(dstField)
+		return nil
+	}
+
 	if dstType == jsonRawMessageType && srcType.Kind() == reflect.String {
 		dstField.Set(reflect.ValueOf(json.RawMessage(srcField.String())))
 		return nil
@@ -198,6 +209,14 @@ func convertAndSet(dstField, srcField reflect.Value) error {
 		}
 		dstField.SetInt(int64(val))
 		return nil
+	}
+
+	if srcType.Kind() == reflect.String && (dstType.Kind() == reflect.Slice || dstType.Kind() == reflect.Map) {
+		newVal := reflect.New(dstType)
+		if err := json.Unmarshal([]byte(srcField.String()), newVal.Interface()); err == nil {
+			dstField.Set(newVal.Elem())
+			return nil
+		}
 	}
 
 	if err := convertNullTypes(dstField, srcField); err == nil {
