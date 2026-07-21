@@ -121,6 +121,7 @@ func Runner() {
 	app.Delete("/users/:id", handlers.DeleteUser)
 
 	app.Get("/test", handlers.TestResponse)
+	app.Get("/set/fields/:id", handlers.SetFields)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)

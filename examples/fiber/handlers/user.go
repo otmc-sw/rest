@@ -60,6 +60,16 @@ func ValidateUser(r UserRequest) error {
 		Process()
 }
 
+func generateRandomTestInt() int64 {
+	return 1234
+}
+
+func CustomFields() map[string]any {
+	return map[string]any{
+		"TestInt": generateRandomTestInt(),
+	}
+}
+
 func CreateUser(c *fiber.Ctx) error {
 	return rest.
 		Create[UserRequest, db.CreateUserParams, db.User, UserResponse](FiberContext{Ctx: c}).
@@ -115,6 +125,16 @@ func DeleteUser(c *fiber.Ctx) error {
 		Exec(func(ctx rest.Context, req struct{}, params struct{}, id any) (any, error) {
 			return nil, database.DeleteUser(ctx.Context(), id.(int64))
 		}).
+		Respond()
+}
+
+func SetFields(c *fiber.Ctx) error {
+	return rest.
+		Get[struct{}, struct{}, db.User, UserResponse](FiberContext{Ctx: c}).
+		Exec(func(ctx rest.Context, req struct{}, params struct{}, id any) (any, error) {
+			return database.GetUser(ctx.Context(), id.(int64))
+		}).
+		SetFields(CustomFields()).
 		Respond()
 }
 

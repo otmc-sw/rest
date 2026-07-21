@@ -23,15 +23,16 @@ type ExecHandler[Req any] func(ctx context.Context, req Req, id any) (any, error
 type PatchHandler[Req any, Params any] func(ctx context.Context, req Req, params Params, id any) (any, error)
 
 type Pipeline[Req any, Params any, Entity any, Res any] struct {
-	ctx      context.Context
-	id       any
-	bound    *Req
-	entity   *Entity
-	entityFn func() Entity
-	err      error
-	status   int
-	paramsFn func(Req) Params
-	params   Params
+	ctx          context.Context
+	id           any
+	bound        *Req
+	entity       *Entity
+	entityFn     func() Entity
+	err          error
+	status       int
+	paramsFn     func(Req) Params
+	params       Params
+	customFields map[string]any
 }
 
 func newPipeline[Req any, Params any, Entity any, Res any](ctx context.Context, status int) *Pipeline[Req, Params, Entity, Res] {
@@ -109,6 +110,15 @@ func (p *Pipeline[Req, Params, Entity, Res]) Params(fn func(Req) Params) *Pipeli
 	p.paramsFn = fn
 	p.params = fn(*p.bound)
 	debugger.Pipeline("Params: %+v", p.params)
+	return p
+}
+
+func (p *Pipeline[Req, Params, Entity, Res]) SetFields(fields map[string]any) *Pipeline[Req, Params, Entity, Res] {
+	if p.err != nil {
+		return p
+	}
+	debugger.PipelineStep("SetFields", "fields=%+v", fields)
+	p.customFields = fields
 	return p
 }
 
@@ -191,6 +201,15 @@ func (p *Pipeline[Req, Params, Entity, Res]) Respond() error {
 	}
 
 	res := mapper.Map[Res](*p.entity)
+
+	// Apply custom fields if set
+	if p.customFields != nil {
+		for key, value := range p.customFields {
+			mapper.SetField(&res, key, value)
+			debugger.Pipeline("SetFields: %s = %v", key, value)
+		}
+	}
+
 	debugger.Pipeline("Respond success")
 	return response.New[Res](p.ctx, p.status).Data(res).Send()
 }
