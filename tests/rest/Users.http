@@ -6,6 +6,9 @@ GET {{baseUrl}}/test
 ### Set fields endpoint
 GET {{baseUrl}}/set/fields/1
 
+### Set field endpoint
+GET {{baseUrl}}/set/field/1
+
 ### Get all users
 GET {{baseUrl}}/users
 

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/otmc-sw/rest/config"
 	"github.com/otmc-sw/rest/context"
 	"github.com/otmc-sw/rest/debugger"
 	"github.com/otmc-sw/rest/errors"
@@ -33,6 +34,7 @@ type Pipeline[Req any, Params any, Entity any, Res any] struct {
 	paramsFn     func(Req) Params
 	params       Params
 	customFields map[string]any
+	operation    string
 }
 
 func newPipeline[Req any, Params any, Entity any, Res any](ctx context.Context, status int) *Pipeline[Req, Params, Entity, Res] {
@@ -41,27 +43,37 @@ func newPipeline[Req any, Params any, Entity any, Res any](ctx context.Context, 
 
 func Create[Req any, Params any, Entity any, Res any](ctx context.Context) *Pipeline[Req, Params, Entity, Res] {
 	debugger.Pipeline("Create[%T, %T]", *new(Req), *new(Entity))
-	return newPipeline[Req, Params, Entity, Res](ctx, 201)
+	p := newPipeline[Req, Params, Entity, Res](ctx, 201)
+	p.operation = "Post"
+	return p
 }
 
 func Get[Req any, Params any, Entity any, Res any](ctx context.Context) *Pipeline[Req, Params, Entity, Res] {
 	debugger.Pipeline("Get[%T, %T]", *new(Req), *new(Entity))
-	return newPipeline[Req, Params, Entity, Res](ctx, 200)
+	p := newPipeline[Req, Params, Entity, Res](ctx, 200)
+	p.operation = "Get"
+	return p
 }
 
 func Update[Req any, Params any, Entity any, Res any](ctx context.Context) *Pipeline[Req, Params, Entity, Res] {
 	debugger.Pipeline("Update[%T, %T]", *new(Req), *new(Entity))
-	return newPipeline[Req, Params, Entity, Res](ctx, 200)
+	p := newPipeline[Req, Params, Entity, Res](ctx, 200)
+	p.operation = "Update"
+	return p
 }
 
 func Patch[Req any, Params any, Entity any, Res any](ctx context.Context) *Pipeline[Req, Params, Entity, Res] {
 	debugger.Pipeline("Patch[%T, %T, %T]", *new(Req), *new(Params), *new(Entity))
-	return newPipeline[Req, Params, Entity, Res](ctx, 200)
+	p := newPipeline[Req, Params, Entity, Res](ctx, 200)
+	p.operation = "Patch"
+	return p
 }
 
 func Delete[Req any, Params any, Entity any, Res any](ctx context.Context) *Pipeline[Req, Params, Entity, Res] {
 	debugger.Pipeline("Delete")
-	return newPipeline[Req, Params, Entity, Res](ctx, 204)
+	p := newPipeline[Req, Params, Entity, Res](ctx, 204)
+	p.operation = "Delete"
+	return p
 }
 
 func (p *Pipeline[Req, Params, Entity, Res]) Param(key string) *Pipeline[Req, Params, Entity, Res] {
@@ -119,6 +131,18 @@ func (p *Pipeline[Req, Params, Entity, Res]) SetFields(fields map[string]any) *P
 	}
 	debugger.PipelineStep("SetFields", "fields=%+v", fields)
 	p.customFields = fields
+	return p
+}
+
+func (p *Pipeline[Req, Params, Entity, Res]) SetField(key string, value any) *Pipeline[Req, Params, Entity, Res] {
+	if p.err != nil {
+		return p
+	}
+	if p.customFields == nil {
+		p.customFields = make(map[string]any)
+	}
+	debugger.PipelineStep("SetField", "key=%s value=%v", key, value)
+	p.customFields[key] = value
 	return p
 }
 
@@ -202,7 +226,28 @@ func (p *Pipeline[Req, Params, Entity, Res]) Respond() error {
 
 	res := mapper.Map[Res](*p.entity)
 
-	// Apply custom fields if set
+	globalCfg := config.GetGlobalConfig()
+	if globalCfg != nil && p.operation != "" {
+		var opConfig *config.OperationConfig
+		switch p.operation {
+		case "Post":
+			opConfig = globalCfg.Post()
+		case "Get":
+			opConfig = globalCfg.Get()
+		case "Update":
+			opConfig = globalCfg.Update()
+		case "Patch":
+			opConfig = globalCfg.Patch()
+		case "Delete":
+			opConfig = globalCfg.Delete()
+		}
+		fields := opConfig.GetFields()
+		for key, value := range fields {
+			mapper.SetField(&res, key, value)
+			debugger.Pipeline("GlobalConfig[%s]: %s = %v", p.operation, key, value)
+		}
+	}
+
 	if p.customFields != nil {
 		for key, value := range p.customFields {
 			mapper.SetField(&res, key, value)

@@ -6,6 +6,7 @@
 package rest
 
 import (
+	"github.com/otmc-sw/rest/config"
 	"github.com/otmc-sw/rest/context"
 	"github.com/otmc-sw/rest/debugger"
 	"github.com/otmc-sw/rest/errors"
@@ -17,6 +18,8 @@ import (
 
 type Context = context.Context
 
+type Config = config.Config
+
 type Handler[Req any, Entity any] = pipeline.Handler[Req, Entity]
 
 type ExecHandler[Req any] = pipeline.ExecHandler[Req]
@@ -24,6 +27,10 @@ type ExecHandler[Req any] = pipeline.ExecHandler[Req]
 type PatchHandler[Req any, Params any] = pipeline.PatchHandler[Req, Params]
 
 type Pipeline[Req any, Params any, Entity any, Res any] = pipeline.Pipeline[Req, Params, Entity, Res]
+
+func Configure(fn func(*Config)) {
+	config.Configure(fn)
+}
 
 func Create[Req any, Params any, Entity any, Res any](ctx Context) *Pipeline[Req, Params, Entity, Res] {
 	return pipeline.Create[Req, Params, Entity, Res](ctx)

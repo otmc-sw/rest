@@ -122,6 +122,7 @@ func Runner() {
 
 	app.Get("/test", handlers.TestResponse)
 	app.Get("/set/fields/:id", handlers.SetFields)
+	app.Get("/set/field/:id", handlers.SetField)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)

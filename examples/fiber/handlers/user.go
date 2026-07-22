@@ -64,6 +64,12 @@ func generateRandomTestInt() int64 {
 	return 1234
 }
 
+func init() {
+	rest.Configure(func(c *rest.Config) {
+		c.Post().SetField("TestInt", generateRandomTestInt)
+	})
+}
+
 func CustomFields() map[string]any {
 	return map[string]any{
 		"TestInt": generateRandomTestInt(),
@@ -135,6 +141,16 @@ func SetFields(c *fiber.Ctx) error {
 			return database.GetUser(ctx.Context(), id.(int64))
 		}).
 		SetFields(CustomFields()).
+		Respond()
+}
+
+func SetField(c *fiber.Ctx) error {
+	return rest.
+		Get[struct{}, struct{}, db.User, UserResponse](FiberContext{Ctx: c}).
+		Exec(func(ctx rest.Context, req struct{}, params struct{}, id any) (any, error) {
+			return database.GetUser(ctx.Context(), id.(int64))
+		}).
+		SetField("TestInt", 123).
 		Respond()
 }
 
