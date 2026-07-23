@@ -6,11 +6,13 @@
 package config
 
 import (
+	"reflect"
 	"sync"
 )
 
 type OperationConfig struct {
-	fields map[string]any
+	fields     map[string]any
+	fieldFuncs map[string]func(any) any
 }
 
 func (oc *OperationConfig) SetField(key string, value any) *OperationConfig {
@@ -51,6 +53,68 @@ func (oc *OperationConfig) AppendFields(fields map[string]any) *OperationConfig 
 
 func (oc *OperationConfig) GetFields() map[string]any {
 	return oc.fields
+}
+
+func (oc *OperationConfig) GetFieldFuncs() map[string]func(any) any {
+	return oc.fieldFuncs
+}
+
+func (oc *OperationConfig) SetFieldFunc(key string, fn func(any) any) *OperationConfig {
+	if oc.fieldFuncs == nil {
+		oc.fieldFuncs = make(map[string]func(any) any)
+	}
+	oc.fieldFuncs[key] = fn
+	return oc
+}
+
+func (oc *OperationConfig) SetFieldsFuncs(fields map[string]func(any) any) *OperationConfig {
+	if oc.fieldFuncs == nil {
+		oc.fieldFuncs = make(map[string]func(any) any)
+	}
+	for k, v := range fields {
+		oc.fieldFuncs[k] = v
+	}
+	return oc
+}
+
+func (oc *OperationConfig) AppendFieldFunc(key string, fn func(any) any) *OperationConfig {
+	if oc.fieldFuncs == nil {
+		oc.fieldFuncs = make(map[string]func(any) any)
+	}
+	oc.fieldFuncs[key] = fn
+	return oc
+}
+
+func (oc *OperationConfig) AppendFieldsFuncs(fields map[string]func(any) any) *OperationConfig {
+	if oc.fieldFuncs == nil {
+		oc.fieldFuncs = make(map[string]func(any) any)
+	}
+	for k, v := range fields {
+		oc.fieldFuncs[k] = v
+	}
+	return oc
+}
+
+func (oc *OperationConfig) SetFieldAuto(key string, fn func() any) *OperationConfig {
+	if oc.fieldFuncs == nil {
+		oc.fieldFuncs = make(map[string]func(any) any)
+	}
+	oc.fieldFuncs[key] = func(_ any) any {
+		return fn()
+	}
+	return oc
+}
+
+func (oc *OperationConfig) SetFieldsAuto(fields map[string]func() any) *OperationConfig {
+	if oc.fieldFuncs == nil {
+		oc.fieldFuncs = make(map[string]func(any) any)
+	}
+	for k, v := range fields {
+		oc.fieldFuncs[k] = func(_ any) any {
+			return v()
+		}
+	}
+	return oc
 }
 
 type Config struct {
@@ -115,4 +179,43 @@ func GetGlobalConfig() *Config {
 	globalConfigMu.RLock()
 	defer globalConfigMu.RUnlock()
 	return globalConfig
+}
+
+func GetField(obj any, fieldName string) any {
+	if obj == nil {
+		return nil
+	}
+	val := reflect.ValueOf(obj)
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+	if val.Kind() != reflect.Struct {
+		return nil
+	}
+	field := val.FieldByName(fieldName)
+	if !field.IsValid() {
+		return nil
+	}
+	return field.Interface()
+}
+
+func GetFieldInt64(obj any, fieldName string) int64 {
+	if v := GetField(obj, fieldName); v != nil {
+		if i, ok := v.(int64); ok {
+			return i
+		}
+		if i, ok := v.(int); ok {
+			return int64(i)
+		}
+	}
+	return 0
+}
+
+func GetFieldString(obj any, fieldName string) string {
+	if v := GetField(obj, fieldName); v != nil {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
 }

@@ -155,3 +155,15 @@ func DebugComponent(component string) {
 func DebugWithEnv() {
 	debugger.WithEnv()
 }
+
+func GetField(obj any, fieldName string) any {
+	return config.GetField(obj, fieldName)
+}
+
+func GetFieldInt64(obj any, fieldName string) int64 {
+	return config.GetFieldInt64(obj, fieldName)
+}
+
+func GetFieldString(obj any, fieldName string) string {
+	return config.GetFieldString(obj, fieldName)
+}

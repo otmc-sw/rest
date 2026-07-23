@@ -246,6 +246,12 @@ func (p *Pipeline[Req, Params, Entity, Res]) Respond() error {
 			mapper.SetField(&res, key, value)
 			debugger.Pipeline("GlobalConfig[%s]: %s = %v", p.operation, key, value)
 		}
+		fieldFuncs := opConfig.GetFieldFuncs()
+		for key, fn := range fieldFuncs {
+			value := fn(res)
+			mapper.SetField(&res, key, value)
+			debugger.Pipeline("GlobalConfigFunc[%s]: %s = %v", p.operation, key, value)
+		}
 	}
 
 	if p.customFields != nil {

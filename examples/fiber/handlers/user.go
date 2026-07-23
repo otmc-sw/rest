@@ -60,19 +60,22 @@ func ValidateUser(r UserRequest) error {
 		Process()
 }
 
-func generateRandomTestInt() int64 {
-	return 1234
+func generateRandomTestIntFromID(id int64) int64 {
+	return id + 5
 }
 
 func init() {
 	rest.Configure(func(c *rest.Config) {
-		c.Post().SetField("TestInt", generateRandomTestInt)
+		c.Post().SetFieldFunc("TestInt", func(res any) any {
+			id := rest.GetFieldInt64(res, "ID")
+			return generateRandomTestIntFromID(id)
+		})
 	})
 }
 
 func CustomFields() map[string]any {
 	return map[string]any{
-		"TestInt": generateRandomTestInt(),
+		"TestInt": 11332,
 	}
 }
 
