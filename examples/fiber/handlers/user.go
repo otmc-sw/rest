@@ -8,6 +8,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -64,6 +65,10 @@ func ValidateUser(r UserRequest) error {
 
 func generatPostUsername(id int64) string {
 	return fmt.Sprintf("default_post_user_%d", id)
+}
+
+func generateDownloadFilePath(id int64) string {
+	return fmt.Sprintf("/test/download_%d.txt", id)
 }
 
 func init() {
@@ -170,21 +175,14 @@ func TestResponse(c *fiber.Ctx) error {
 
 func DownloadFile(c *fiber.Ctx) error {
 	var file rest.File
-	fileName := c.Query("file")
-	if fileName == "" {
-		return c.Status(400).JSON(fiber.Map{
-			"success": false,
-			"error":   "file query parameter is required",
-		})
-	}
+	id := c.Params("id")
+	idInt, _ := strconv.ParseInt(id, 10, 64)
+	filePath := generateDownloadFilePath(idInt)
 
 	return rest.
 		Download(FiberContext{Ctx: c}).
-		Source("./data/files/" + fileName).
+		Source("./data/files" + filePath).
 		Bind(&file).
-		After(func(ctx rest.Context, f *rest.File) error {
-			return nil
-		}).
 		Respond()
 }
 
@@ -195,8 +193,5 @@ func UploadFile(c *fiber.Ctx) error {
 		Upload(FiberContext{Ctx: c}).
 		Destination("./data/files").
 		Bind(&file).
-		After(func(ctx rest.Context, f *rest.File) error {
-			return nil
-		}).
 		Respond()
 }
