@@ -8,6 +8,7 @@ package pipeline
 import (
 	"io"
 	"mime"
+	"mime/multipart"
 	"os"
 	"path/filepath"
 	"strings"
@@ -90,11 +91,7 @@ func (p *UploadPipeline) Respond() error {
 			Send(p.ctx)
 	}
 
-	fileHeader, ok := uploadedFile.(interface {
-		Filename() string
-		Size() int64
-		Open() (io.ReadCloser, error)
-	})
+	fileHeader, ok := uploadedFile.(*multipart.FileHeader)
 	if !ok {
 		debugger.Error(debugger.ComponentPipeline, "unexpected FormFile type: %T", uploadedFile)
 		return errors.New().Skip(2).InternalError().
@@ -102,7 +99,7 @@ func (p *UploadPipeline) Respond() error {
 			Send(p.ctx)
 	}
 
-	originalName := filepath.Base(fileHeader.Filename())
+	originalName := filepath.Base(fileHeader.Filename)
 	ext := strings.TrimPrefix(filepath.Ext(originalName), ".")
 	contentType := mime.TypeByExtension(filepath.Ext(originalName))
 	if contentType == "" {
@@ -124,7 +121,7 @@ func (p *UploadPipeline) Respond() error {
 		OriginalName: originalName,
 		Extension:    ext,
 		Path:         filepath.Join(p.destination, originalName),
-		Size:         fileHeader.Size(),
+		Size:         fileHeader.Size,
 		ContentType:  contentType,
 		LastModified: time.Now(),
 		Metadata:     make(map[string]any),

@@ -168,12 +168,19 @@ func TestResponse(c *fiber.Ctx) error {
 	return rest.OK(FiberContext{Ctx: c}).Data(data).Message("OK").Send()
 }
 
-func DownloadReport(c *fiber.Ctx) error {
+func DownloadFile(c *fiber.Ctx) error {
 	var file rest.File
+	fileName := c.Query("file")
+	if fileName == "" {
+		return c.Status(400).JSON(fiber.Map{
+			"success": false,
+			"error":   "file query parameter is required",
+		})
+	}
 
 	return rest.
 		Download(FiberContext{Ctx: c}).
-		Source("/tmp/report.pdf").
+		Source("./data/files/" + fileName).
 		Bind(&file).
 		After(func(ctx rest.Context, f *rest.File) error {
 			return nil
@@ -181,67 +188,13 @@ func DownloadReport(c *fiber.Ctx) error {
 		Respond()
 }
 
-func PreviewImage(c *fiber.Ctx) error {
-	return rest.
-		Download(FiberContext{Ctx: c}).
-		Source("/tmp/image.png").
-		Respond()
-}
-
-func SendLogo(c *fiber.Ctx) error {
-	return rest.
-		Download(FiberContext{Ctx: c}).
-		Source("./assets/logo.svg").
-		Respond()
-}
-
-func Login(c *fiber.Ctx) error {
-	return rest.
-		Raw(FiberContext{Ctx: c}).
-		Exec(func(ctx rest.Context) error {
-			return ctx.Redirect(
-				"/dashboard",
-			)
-		}).
-		Respond()
-}
-
-func Home(c *fiber.Ctx) error {
-	return rest.
-		Raw(FiberContext{Ctx: c}).
-		Exec(func(ctx rest.Context) error {
-			return ctx.HTML(`
-				<h1>Hello</h1>
-			`)
-		}).
-		Respond()
-}
-
-func StreamData(c *fiber.Ctx) error {
-	return rest.
-		Raw(FiberContext{Ctx: c}).
-		Exec(func(ctx rest.Context) error {
-			return ctx.Stream(nil)
-		}).
-		Respond()
-}
-
-func UploadAvatar(c *fiber.Ctx) error {
+func UploadFile(c *fiber.Ctx) error {
 	var file rest.File
 
 	return rest.
 		Upload(FiberContext{Ctx: c}).
-		Destination("./uploads/avatars").
+		Destination("./data/files").
 		Bind(&file).
-		Before(func(ctx rest.Context, f *rest.File) error {
-			if f.ContentType != "image/jpeg" && f.ContentType != "image/png" {
-				return rest.BadRequest("Invalid file type", fmt.Errorf("only JPEG and PNG images are allowed"))
-			}
-			if f.Size > 5*1024*1024 {
-				return rest.BadRequest("File too large", fmt.Errorf("maximum file size is 5MB"))
-			}
-			return nil
-		}).
 		After(func(ctx rest.Context, f *rest.File) error {
 			return nil
 		}).
