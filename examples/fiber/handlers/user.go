@@ -8,7 +8,6 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -165,33 +164,3 @@ func SetField(c *fiber.Ctx) error {
 		Respond()
 }
 
-func TestResponse(c *fiber.Ctx) error {
-	data := map[string]any{
-		"status":    "success",
-		"test_data": "Hello World",
-	}
-	return rest.OK(FiberContext{Ctx: c}).Data(data).Message("OK").Send()
-}
-
-func DownloadFile(c *fiber.Ctx) error {
-	var file rest.File
-	id := c.Params("id")
-	idInt, _ := strconv.ParseInt(id, 10, 64)
-	filePath := generateDownloadFilePath(idInt)
-
-	return rest.
-		Download(FiberContext{Ctx: c}).
-		Source("./data/files" + filePath).
-		Bind(&file).
-		Respond()
-}
-
-func UploadFile(c *fiber.Ctx) error {
-	var file rest.File
-
-	return rest.
-		Upload(FiberContext{Ctx: c}).
-		Destination("./data/files").
-		Bind(&file).
-		Respond()
-}
