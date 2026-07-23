@@ -7,6 +7,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -60,22 +61,22 @@ func ValidateUser(r UserRequest) error {
 		Process()
 }
 
-func generateRandomTestIntFromID(id int64) int64 {
-	return id + 5
+func generatPostUsername(id int64) string {
+	return fmt.Sprintf("default_post_user_%d", id)
 }
 
 func init() {
 	rest.Configure(func(c *rest.Config) {
-		c.Post().SetFieldFunc("TestInt", func(res any) any {
+		c.Post().SetFieldFunc("Username", func(res any) any {
 			id := rest.GetFieldInt64(res, "ID")
-			return generateRandomTestIntFromID(id)
+			return generatPostUsername(id)
 		})
 	})
 }
 
 func CustomFields() map[string]any {
 	return map[string]any{
-		"TestInt": 11332,
+		"Username": "custom_fields_username",
 	}
 }
 
@@ -153,7 +154,7 @@ func SetField(c *fiber.Ctx) error {
 		Exec(func(ctx rest.Context, req struct{}, params struct{}, id any) (any, error) {
 			return database.GetUser(ctx.Context(), id.(int64))
 		}).
-		SetField("TestInt", 123).
+		SetField("Username", "set_field_value").
 		Respond()
 }
 

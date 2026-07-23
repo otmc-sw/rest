@@ -227,30 +227,35 @@ func (p *Pipeline[Req, Params, Entity, Res]) Respond() error {
 	res := mapper.Map[Res](*p.entity)
 
 	globalCfg := config.GetGlobalConfig()
-	if globalCfg != nil && p.operation != "" {
-		var opConfig *config.OperationConfig
-		switch p.operation {
-		case "Post":
-			opConfig = globalCfg.Post()
-		case "Get":
-			opConfig = globalCfg.Get()
-		case "Update":
-			opConfig = globalCfg.Update()
-		case "Patch":
-			opConfig = globalCfg.Patch()
-		case "Delete":
-			opConfig = globalCfg.Delete()
+	if globalCfg != nil {
+		preConfig := globalCfg.Pre()
+		if preConfig != nil {
+			fields := preConfig.GetFields()
+			for key, value := range fields {
+				mapper.SetField(&res, key, value)
+				debugger.Pipeline("GlobalConfig[pre]: %s = %v", key, value)
+			}
+			fieldFuncs := preConfig.GetFieldFuncs()
+			for key, fn := range fieldFuncs {
+				value := fn(res)
+				mapper.SetField(&res, key, value)
+				debugger.Pipeline("GlobalConfigFunc[pre]: %s = %v", key, value)
+			}
 		}
-		fields := opConfig.GetFields()
-		for key, value := range fields {
-			mapper.SetField(&res, key, value)
-			debugger.Pipeline("GlobalConfig[%s]: %s = %v", p.operation, key, value)
-		}
-		fieldFuncs := opConfig.GetFieldFuncs()
-		for key, fn := range fieldFuncs {
-			value := fn(res)
-			mapper.SetField(&res, key, value)
-			debugger.Pipeline("GlobalConfigFunc[%s]: %s = %v", p.operation, key, value)
+
+		postConfig := globalCfg.Post()
+		if postConfig != nil {
+			fields := postConfig.GetFields()
+			for key, value := range fields {
+				mapper.SetField(&res, key, value)
+				debugger.Pipeline("GlobalConfig[post]: %s = %v", key, value)
+			}
+			fieldFuncs := postConfig.GetFieldFuncs()
+			for key, fn := range fieldFuncs {
+				value := fn(res)
+				mapper.SetField(&res, key, value)
+				debugger.Pipeline("GlobalConfigFunc[post]: %s = %v", key, value)
+			}
 		}
 	}
 

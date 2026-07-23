@@ -96,11 +96,15 @@ func (oc *OperationConfig) AppendFieldsFuncs(fields map[string]func(any) any) *O
 }
 
 type Config struct {
-	post   *OperationConfig
-	get    *OperationConfig
-	update *OperationConfig
-	patch  *OperationConfig
-	delete *OperationConfig
+	pre  *OperationConfig
+	post *OperationConfig
+}
+
+func (c *Config) Pre() *OperationConfig {
+	if c.pre == nil {
+		c.pre = &OperationConfig{}
+	}
+	return c.pre
 }
 
 func (c *Config) Post() *OperationConfig {
@@ -108,34 +112,6 @@ func (c *Config) Post() *OperationConfig {
 		c.post = &OperationConfig{}
 	}
 	return c.post
-}
-
-func (c *Config) Get() *OperationConfig {
-	if c.get == nil {
-		c.get = &OperationConfig{}
-	}
-	return c.get
-}
-
-func (c *Config) Update() *OperationConfig {
-	if c.update == nil {
-		c.update = &OperationConfig{}
-	}
-	return c.update
-}
-
-func (c *Config) Patch() *OperationConfig {
-	if c.patch == nil {
-		c.patch = &OperationConfig{}
-	}
-	return c.patch
-}
-
-func (c *Config) Delete() *OperationConfig {
-	if c.delete == nil {
-		c.delete = &OperationConfig{}
-	}
-	return c.delete
 }
 
 var (
