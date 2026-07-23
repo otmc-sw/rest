@@ -30,6 +30,12 @@ type Pipeline[Req any, Params any, Entity any, Res any] = pipeline.Pipeline[Req,
 
 type RawHandler = pipeline.RawHandler
 
+type File = pipeline.File
+
+type DownloadPipeline = pipeline.DownloadPipeline
+
+type UploadPipeline = pipeline.UploadPipeline
+
 func Configure(fn func(*Config)) {
 	config.Configure(fn)
 }
@@ -56,6 +62,14 @@ func Delete[Req any, Params any, Entity any, Res any](ctx Context) *Pipeline[Req
 
 func Raw(ctx Context) RawHandler {
 	return pipeline.Raw(ctx)
+}
+
+func Download(ctx Context) *DownloadPipeline {
+	return pipeline.Download(ctx)
+}
+
+func Upload(ctx Context) *UploadPipeline {
+	return pipeline.Upload(ctx)
 }
 
 func Register[Src any, Dst any](fn func(Src) Dst) {

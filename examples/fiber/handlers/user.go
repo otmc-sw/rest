@@ -168,37 +168,30 @@ func TestResponse(c *fiber.Ctx) error {
 	return rest.OK(FiberContext{Ctx: c}).Data(data).Message("OK").Send()
 }
 
-func DownloadFile(c *fiber.Ctx) error {
+func DownloadReport(c *fiber.Ctx) error {
+	var file rest.File
+
 	return rest.
-		Raw(FiberContext{Ctx: c}).
-		Exec(func(ctx rest.Context) error {
-			return ctx.Download(
-				"/tmp/report.pdf",
-				"Report.pdf",
-			)
+		Download(FiberContext{Ctx: c}).
+		Source("/tmp/report.pdf").
+		Bind(&file).
+		After(func(ctx rest.Context, f *rest.File) error {
+			return nil
 		}).
 		Respond()
 }
 
-func PreviewFile(c *fiber.Ctx) error {
+func PreviewImage(c *fiber.Ctx) error {
 	return rest.
-		Raw(FiberContext{Ctx: c}).
-		Exec(func(ctx rest.Context) error {
-			return ctx.SendFile(
-				"/tmp/image.png",
-			)
-		}).
+		Download(FiberContext{Ctx: c}).
+		Source("/tmp/image.png").
 		Respond()
 }
 
 func SendLogo(c *fiber.Ctx) error {
 	return rest.
-		Raw(FiberContext{Ctx: c}).
-		Exec(func(ctx rest.Context) error {
-			return ctx.SendFile(
-				"./assets/logo.svg",
-			)
-		}).
+		Download(FiberContext{Ctx: c}).
+		Source("./assets/logo.svg").
 		Respond()
 }
 
@@ -233,15 +226,23 @@ func StreamData(c *fiber.Ctx) error {
 		Respond()
 }
 
-func UploadFile(c *fiber.Ctx) error {
+func UploadAvatar(c *fiber.Ctx) error {
+	var file rest.File
+
 	return rest.
-		Raw(FiberContext{Ctx: c}).
-		Exec(func(ctx rest.Context) error {
-			file, err := ctx.FormFile("file")
-			if err != nil {
-				return err
+		Upload(FiberContext{Ctx: c}).
+		Destination("./uploads/avatars").
+		Bind(&file).
+		Before(func(ctx rest.Context, f *rest.File) error {
+			if f.ContentType != "image/jpeg" && f.ContentType != "image/png" {
+				return rest.BadRequest("Invalid file type", fmt.Errorf("only JPEG and PNG images are allowed"))
 			}
-			_ = file
+			if f.Size > 5*1024*1024 {
+				return rest.BadRequest("File too large", fmt.Errorf("maximum file size is 5MB"))
+			}
+			return nil
+		}).
+		After(func(ctx rest.Context, f *rest.File) error {
 			return nil
 		}).
 		Respond()

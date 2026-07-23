@@ -53,6 +53,7 @@ func (c FiberContext) Path() string                { return c.Ctx.Path() }
 func (c FiberContext) String() (string, error)     { return string(c.Ctx.Body()), nil }
 func (c FiberContext) Bytes() ([]byte, error)      { return c.Ctx.Body(), nil }
 func (c FiberContext) SendFile(path string) error  { return c.Ctx.SendFile(path) }
+
 func (c FiberContext) Download(path string, name string) error {
 	return c.Ctx.Download(path, name)
 }
