@@ -71,6 +71,8 @@ func setupFileTestApp(t *testing.T) (*fiber.App, string, func()) {
 
 	app.Get("/download/file/:id", DownloadFile)
 	app.Post("/upload/file", UploadFile)
+	app.Get("/read/file/:id", ReadFileContent)
+	app.Put("/update/file/:id", UpdateFileContent)
 
 	cleanup := func() {
 		os.Chdir(originalDir)
@@ -316,4 +318,217 @@ func TestUploadAndDownloadCycle(t *testing.T) {
 	}
 
 	t.Logf("Upload and download cycle completed successfully")
+}
+
+func TestReadFileContent_Success(t *testing.T) {
+	app, filesDir, cleanup := setupFileTestApp(t)
+	defer cleanup()
+
+	testSubDir := filepath.Join(filesDir, "test")
+	if err := os.MkdirAll(testSubDir, 0755); err != nil {
+		t.Fatalf("failed to create test subdirectory: %v", err)
+	}
+
+	testFileName := "download_123.txt"
+	testFilePath := filepath.Join(testSubDir, testFileName)
+	testContent := "This is test file content for reading"
+
+	err := os.WriteFile(testFilePath, []byte(testContent), 0644)
+	if err != nil {
+		t.Fatalf("failed to create test file: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodGet, "/read/file/123", nil)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	resp, err := app.Test(req, 5000)
+	if err != nil {
+		t.Fatalf("GET /read/file failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("failed to read response body: %v", err)
+	}
+
+	if !bytes.Contains(body, []byte(testContent)) {
+		t.Fatalf("response body does not contain expected content: expected '%s', got '%s'", testContent, string(body))
+	}
+
+	t.Logf("File content read successfully")
+}
+
+func TestReadFileContent_NotFound(t *testing.T) {
+	app, _, cleanup := setupFileTestApp(t)
+	defer cleanup()
+
+	req, err := http.NewRequest(http.MethodGet, "/read/file/999", nil)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	resp, err := app.Test(req, 5000)
+	if err != nil {
+		t.Fatalf("GET /read/file failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	t.Logf("Read non-existent file content returned status %d", resp.StatusCode)
+}
+
+func TestUpdateFileContent_Success(t *testing.T) {
+	app, filesDir, cleanup := setupFileTestApp(t)
+	defer cleanup()
+
+	testSubDir := filepath.Join(filesDir, "test")
+	if err := os.MkdirAll(testSubDir, 0755); err != nil {
+		t.Fatalf("failed to create test subdirectory: %v", err)
+	}
+
+	testFileName := "download_123.txt"
+	testFilePath := filepath.Join(testSubDir, testFileName)
+	initialContent := "Initial content"
+
+	err := os.WriteFile(testFilePath, []byte(initialContent), 0644)
+	if err != nil {
+		t.Fatalf("failed to create test file: %v", err)
+	}
+
+	newContent := "Updated file content"
+	updateBody := []byte(`{"content":"` + newContent + `"}`)
+
+	req, err := http.NewRequest(http.MethodPut, "/update/file/123", bytes.NewReader(updateBody))
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, 5000)
+	if err != nil {
+		t.Fatalf("PUT /update/file failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", resp.StatusCode)
+	}
+
+	updatedContent, err := os.ReadFile(testFilePath)
+	if err != nil {
+		t.Fatalf("failed to read updated file: %v", err)
+	}
+
+	if string(updatedContent) != newContent {
+		t.Fatalf("file content not updated: expected '%s', got '%s'", newContent, string(updatedContent))
+	}
+
+	t.Logf("File content updated successfully")
+}
+
+func TestUpdateFileContent_NotFound(t *testing.T) {
+	app, _, cleanup := setupFileTestApp(t)
+	defer cleanup()
+
+	newContent := "Updated file content"
+	updateBody := []byte(`{"content":"` + newContent + `"}`)
+
+	req, err := http.NewRequest(http.MethodPut, "/update/file/999", bytes.NewReader(updateBody))
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, 5000)
+	if err != nil {
+		t.Fatalf("PUT /update/file failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	t.Logf("Update non-existent file content returned status %d", resp.StatusCode)
+}
+
+func TestReadAndUpdateFileContent_Cycle(t *testing.T) {
+	app, filesDir, cleanup := setupFileTestApp(t)
+	defer cleanup()
+
+	testSubDir := filepath.Join(filesDir, "test")
+	if err := os.MkdirAll(testSubDir, 0755); err != nil {
+		t.Fatalf("failed to create test subdirectory: %v", err)
+	}
+
+	testFileName := "download_123.txt"
+	testFilePath := filepath.Join(testSubDir, testFileName)
+	initialContent := "Initial content for cycle test"
+
+	err := os.WriteFile(testFilePath, []byte(initialContent), 0644)
+	if err != nil {
+		t.Fatalf("failed to create test file: %v", err)
+	}
+
+	readReq, err := http.NewRequest(http.MethodGet, "/read/file/123", nil)
+	if err != nil {
+		t.Fatalf("failed to create read request: %v", err)
+	}
+
+	readResp, err := app.Test(readReq, 5000)
+	if err != nil {
+		t.Fatalf("GET /read/file failed: %v", err)
+	}
+	defer readResp.Body.Close()
+
+	if readResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected status 200 for read, got %d", readResp.StatusCode)
+	}
+
+	updatedContent := "Updated content after cycle"
+	updateBody := []byte(`{"content":"` + updatedContent + `"}`)
+
+	updateReq, err := http.NewRequest(http.MethodPut, "/update/file/123", bytes.NewReader(updateBody))
+	if err != nil {
+		t.Fatalf("failed to create update request: %v", err)
+	}
+	updateReq.Header.Set("Content-Type", "application/json")
+
+	updateResp, err := app.Test(updateReq, 5000)
+	if err != nil {
+		t.Fatalf("PUT /update/file failed: %v", err)
+	}
+	defer updateResp.Body.Close()
+
+	if updateResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected status 200 for update, got %d", updateResp.StatusCode)
+	}
+
+	readReq2, err := http.NewRequest(http.MethodGet, "/read/file/123", nil)
+	if err != nil {
+		t.Fatalf("failed to create second read request: %v", err)
+	}
+
+	readResp2, err := app.Test(readReq2, 5000)
+	if err != nil {
+		t.Fatalf("GET /read/file failed: %v", err)
+	}
+	defer readResp2.Body.Close()
+
+	if readResp2.StatusCode != http.StatusOK {
+		t.Fatalf("expected status 200 for second read, got %d", readResp2.StatusCode)
+	}
+
+	body2, err := io.ReadAll(readResp2.Body)
+	if err != nil {
+		t.Fatalf("failed to read response body: %v", err)
+	}
+
+	if !bytes.Contains(body2, []byte(updatedContent)) {
+		t.Fatalf("response body does not contain updated content: expected '%s', got '%s'", updatedContent, string(body2))
+	}
+
+	t.Logf("Read and update file content cycle completed successfully")
 }

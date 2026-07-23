@@ -36,6 +36,12 @@ type DownloadPipeline = pipeline.DownloadPipeline
 
 type UploadPipeline = pipeline.UploadPipeline
 
+type FileContent = pipeline.FileContent
+
+type ReadFileContentPipeline = pipeline.ReadFileContentPipeline
+
+type UpdateFileContentPipeline = pipeline.UpdateFileContentPipeline
+
 func Configure(fn func(*Config)) {
 	config.Configure(fn)
 }
@@ -70,6 +76,14 @@ func Download(ctx Context) *DownloadPipeline {
 
 func Upload(ctx Context) *UploadPipeline {
 	return pipeline.Upload(ctx)
+}
+
+func ReadFileContent(ctx Context) *ReadFileContentPipeline {
+	return pipeline.ReadFileContent(ctx)
+}
+
+func UpdateFileContent(ctx Context) *UpdateFileContentPipeline {
+	return pipeline.UpdateFileContent(ctx)
 }
 
 func Register[Src any, Dst any](fn func(Src) Dst) {

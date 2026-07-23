@@ -48,3 +48,25 @@ func UploadFile(c *fiber.Ctx) error {
 		Bind(&file).
 		Respond()
 }
+
+func ReadFileContent(c *fiber.Ctx) error {
+	id := c.Params("id")
+	idInt, _ := strconv.ParseInt(id, 10, 64)
+	filePath := generateDownloadFilePath(idInt)
+
+	return rest.
+		ReadFileContent(FiberContext{Ctx: c}).
+		Source("./data/files" + filePath).
+		Respond()
+}
+
+func UpdateFileContent(c *fiber.Ctx) error {
+	id := c.Params("id")
+	idInt, _ := strconv.ParseInt(id, 10, 64)
+	filePath := generateDownloadFilePath(idInt)
+
+	return rest.
+		UpdateFileContent(FiberContext{Ctx: c}).
+		Source("./data/files" + filePath).
+		Respond()
+}
