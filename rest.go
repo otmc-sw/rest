@@ -28,6 +28,8 @@ type PatchHandler[Req any, Params any] = pipeline.PatchHandler[Req, Params]
 
 type Pipeline[Req any, Params any, Entity any, Res any] = pipeline.Pipeline[Req, Params, Entity, Res]
 
+type RawHandler = pipeline.RawHandler
+
 func Configure(fn func(*Config)) {
 	config.Configure(fn)
 }
@@ -50,6 +52,10 @@ func Patch[Req any, Params any, Entity any, Res any](ctx Context) *Pipeline[Req,
 
 func Delete[Req any, Params any, Entity any, Res any](ctx Context) *Pipeline[Req, Params, Entity, Res] {
 	return pipeline.Delete[Req, Params, Entity, Res](ctx)
+}
+
+func Raw(ctx Context) RawHandler {
+	return pipeline.Raw(ctx)
 }
 
 func Register[Src any, Dst any](fn func(Src) Dst) {

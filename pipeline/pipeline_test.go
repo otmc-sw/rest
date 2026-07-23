@@ -44,6 +44,34 @@ func (f *fakeContext) Method() string          { return http.MethodPost }
 func (f *fakeContext) Path() string            { return "/docs" }
 func (f *fakeContext) String() (string, error) { return string(f.body), nil }
 func (f *fakeContext) Bytes() ([]byte, error)  { return f.body, nil }
+func (f *fakeContext) SendFile(path string) error {
+	f.wrote = path
+	return nil
+}
+func (f *fakeContext) Download(path string, name string) error {
+	f.wrote = map[string]string{"path": path, "name": name}
+	return nil
+}
+func (f *fakeContext) HTML(html string) error {
+	f.wrote = html
+	return nil
+}
+func (f *fakeContext) Text(text string) error {
+	f.wrote = text
+	return nil
+}
+func (f *fakeContext) Redirect(location string) error {
+	f.wrote = location
+	f.status = 302
+	return nil
+}
+func (f *fakeContext) Stream(reader io.Reader) error {
+	f.wrote = reader
+	return nil
+}
+func (f *fakeContext) FormFile(key string) (interface{}, error) {
+	return nil, nil
+}
 
 var _ restcontext.Context = (*fakeContext)(nil)
 
@@ -122,8 +150,80 @@ func TestInvalidIDFormat(t *testing.T) {
 	if fc.status != 400 {
 		t.Fatalf("expected status 400 for invalid ID format, got %d", fc.status)
 	}
-	
+
 	if fc.wrote == nil {
 		t.Fatal("expected error response to be written")
+	}
+}
+
+func TestRawPipeline(t *testing.T) {
+	fc := &fakeContext{
+		ctx:    stdc.Background(),
+		params: map[string]string{},
+		body:   []byte{},
+		header: http.Header{},
+	}
+
+	err := Raw(fc).
+		Exec(func(ctx restcontext.Context) error {
+			return ctx.SendFile("/tmp/test.pdf")
+		}).
+		Respond()
+	if err != nil {
+		t.Fatalf("raw pipeline failed: %v", err)
+	}
+
+	if fc.wrote != "/tmp/test.pdf" {
+		t.Fatalf("expected wrote to be /tmp/test.pdf, got %v", fc.wrote)
+	}
+}
+
+func TestRawPipelineWithMiddleware(t *testing.T) {
+	fc := &fakeContext{
+		ctx:    stdc.Background(),
+		params: map[string]string{},
+		body:   []byte{},
+		header: http.Header{},
+	}
+
+	middlewareCalled := false
+
+	err := Raw(fc).
+		Middleware(func(ctx restcontext.Context, next func(restcontext.Context) error) error {
+			middlewareCalled = true
+			return next(ctx)
+		}).
+		Exec(func(ctx restcontext.Context) error {
+			return ctx.HTML("<h1>Hello</h1>")
+		}).
+		Respond()
+	if err != nil {
+		t.Fatalf("raw pipeline with middleware failed: %v", err)
+	}
+
+	if !middlewareCalled {
+		t.Fatal("expected middleware to be called")
+	}
+
+	if fc.wrote != "<h1>Hello</h1>" {
+		t.Fatalf("expected wrote to be HTML, got %v", fc.wrote)
+	}
+}
+
+func TestRawPipelineNoHandler(t *testing.T) {
+	fc := &fakeContext{
+		ctx:    stdc.Background(),
+		params: map[string]string{},
+		body:   []byte{},
+		header: http.Header{},
+	}
+
+	err := Raw(fc).Respond()
+	if err != nil {
+		t.Fatalf("expected no error return from Respond when handler sends error, got: %v", err)
+	}
+
+	if fc.wrote == nil {
+		t.Fatal("expected error response to be written to context")
 	}
 }

@@ -167,3 +167,82 @@ func TestResponse(c *fiber.Ctx) error {
 	}
 	return rest.OK(FiberContext{Ctx: c}).Data(data).Message("OK").Send()
 }
+
+func DownloadFile(c *fiber.Ctx) error {
+	return rest.
+		Raw(FiberContext{Ctx: c}).
+		Exec(func(ctx rest.Context) error {
+			return ctx.Download(
+				"/tmp/report.pdf",
+				"Report.pdf",
+			)
+		}).
+		Respond()
+}
+
+func PreviewFile(c *fiber.Ctx) error {
+	return rest.
+		Raw(FiberContext{Ctx: c}).
+		Exec(func(ctx rest.Context) error {
+			return ctx.SendFile(
+				"/tmp/image.png",
+			)
+		}).
+		Respond()
+}
+
+func SendLogo(c *fiber.Ctx) error {
+	return rest.
+		Raw(FiberContext{Ctx: c}).
+		Exec(func(ctx rest.Context) error {
+			return ctx.SendFile(
+				"./assets/logo.svg",
+			)
+		}).
+		Respond()
+}
+
+func Login(c *fiber.Ctx) error {
+	return rest.
+		Raw(FiberContext{Ctx: c}).
+		Exec(func(ctx rest.Context) error {
+			return ctx.Redirect(
+				"/dashboard",
+			)
+		}).
+		Respond()
+}
+
+func Home(c *fiber.Ctx) error {
+	return rest.
+		Raw(FiberContext{Ctx: c}).
+		Exec(func(ctx rest.Context) error {
+			return ctx.HTML(`
+				<h1>Hello</h1>
+			`)
+		}).
+		Respond()
+}
+
+func StreamData(c *fiber.Ctx) error {
+	return rest.
+		Raw(FiberContext{Ctx: c}).
+		Exec(func(ctx rest.Context) error {
+			return ctx.Stream(nil)
+		}).
+		Respond()
+}
+
+func UploadFile(c *fiber.Ctx) error {
+	return rest.
+		Raw(FiberContext{Ctx: c}).
+		Exec(func(ctx rest.Context) error {
+			file, err := ctx.FormFile("file")
+			if err != nil {
+				return err
+			}
+			_ = file
+			return nil
+		}).
+		Respond()
+}

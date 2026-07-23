@@ -24,6 +24,18 @@ type Handler[Req any, Entity any] func(ctx context.Context, req Req, id any) (En
 type ExecHandler[Req any] func(ctx context.Context, req Req, id any) (any, error)
 type PatchHandler[Req any, Params any] func(ctx context.Context, req Req, params Params, id any) (any, error)
 
+type RawHandler interface {
+	Exec(fn func(context.Context) error) RawHandler
+	Middleware(fn func(context.Context, func(context.Context) error) error) RawHandler
+	Respond() error
+}
+
+type rawHandler struct {
+	ctx         context.Context
+	exec        func(context.Context) error
+	middlewares []func(context.Context, func(context.Context) error) error
+}
+
 type Pipeline[Req any, Params any, Entity any, Res any] struct {
 	ctx          context.Context
 	id           any
@@ -355,4 +367,45 @@ func setFieldAny(item any, fieldName string, value any) {
 			field.SetInt(int64(v))
 		}
 	}
+}
+
+func Raw(ctx context.Context) RawHandler {
+	debugger.Pipeline("Raw")
+	return &rawHandler{
+		ctx:         ctx,
+		middlewares: []func(context.Context, func(context.Context) error) error{},
+	}
+}
+
+func (h *rawHandler) Exec(fn func(context.Context) error) RawHandler {
+	debugger.PipelineStep("Raw.Exec", "setting handler")
+	h.exec = fn
+	return h
+}
+
+func (h *rawHandler) Middleware(fn func(context.Context, func(context.Context) error) error) RawHandler {
+	debugger.PipelineStep("Raw.Middleware", "adding middleware")
+	h.middlewares = append(h.middlewares, fn)
+	return h
+}
+
+func (h *rawHandler) Respond() error {
+	debugger.PipelineStep("Raw.Respond", "executing")
+
+	if h.exec == nil {
+		debugger.Error(debugger.ComponentPipeline, "Raw: no handler provided")
+		return errors.New().Skip(2).InternalError().Summary("no handler provided").Send(h.ctx)
+	}
+
+	handler := h.exec
+
+	for i := len(h.middlewares) - 1; i >= 0; i-- {
+		mw := h.middlewares[i]
+		next := handler
+		handler = func(ctx context.Context) error {
+			return mw(ctx, next)
+		}
+	}
+
+	return handler(h.ctx)
 }

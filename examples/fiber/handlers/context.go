@@ -52,3 +52,18 @@ func (c FiberContext) Method() string              { return c.Ctx.Method() }
 func (c FiberContext) Path() string                { return c.Ctx.Path() }
 func (c FiberContext) String() (string, error)     { return string(c.Ctx.Body()), nil }
 func (c FiberContext) Bytes() ([]byte, error)      { return c.Ctx.Body(), nil }
+func (c FiberContext) SendFile(path string) error  { return c.Ctx.SendFile(path) }
+func (c FiberContext) Download(path string, name string) error {
+	return c.Ctx.Download(path, name)
+}
+func (c FiberContext) HTML(html string) error { return c.Ctx.Type("html").SendString(html) }
+func (c FiberContext) Text(text string) error { return c.Ctx.Type("text").SendString(text) }
+func (c FiberContext) Redirect(location string) error {
+	return c.Ctx.Redirect(location)
+}
+func (c FiberContext) Stream(reader io.Reader) error {
+	return c.Ctx.SendStream(reader)
+}
+func (c FiberContext) FormFile(key string) (interface{}, error) {
+	return c.Ctx.FormFile(key)
+}

@@ -40,4 +40,18 @@ type Context interface {
 	String() (string, error)
 
 	Bytes() ([]byte, error)
+
+	SendFile(path string) error
+
+	Download(path string, name string) error
+
+	HTML(html string) error
+
+	Text(text string) error
+
+	Redirect(location string) error
+
+	Stream(reader io.Reader) error
+
+	FormFile(key string) (interface{}, error)
 }

@@ -45,6 +45,34 @@ func (f *fakeContext) Method() string          { return http.MethodPost }
 func (f *fakeContext) Path() string            { return "/docs" }
 func (f *fakeContext) String() (string, error) { return string(f.body), nil }
 func (f *fakeContext) Bytes() ([]byte, error)  { return f.body, nil }
+func (f *fakeContext) SendFile(path string) error {
+	f.wrote = path
+	return nil
+}
+func (f *fakeContext) Download(path string, name string) error {
+	f.wrote = map[string]string{"path": path, "name": name}
+	return nil
+}
+func (f *fakeContext) HTML(html string) error {
+	f.wrote = html
+	return nil
+}
+func (f *fakeContext) Text(text string) error {
+	f.wrote = text
+	return nil
+}
+func (f *fakeContext) Redirect(location string) error {
+	f.wrote = location
+	f.status = 302
+	return nil
+}
+func (f *fakeContext) Stream(reader io.Reader) error {
+	f.wrote = reader
+	return nil
+}
+func (f *fakeContext) FormFile(key string) (interface{}, error) {
+	return nil, nil
+}
 
 var _ restcontext.Context = (*fakeContext)(nil)
 
