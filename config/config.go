@@ -95,28 +95,6 @@ func (oc *OperationConfig) AppendFieldsFuncs(fields map[string]func(any) any) *O
 	return oc
 }
 
-func (oc *OperationConfig) SetFieldAuto(key string, fn func() any) *OperationConfig {
-	if oc.fieldFuncs == nil {
-		oc.fieldFuncs = make(map[string]func(any) any)
-	}
-	oc.fieldFuncs[key] = func(_ any) any {
-		return fn()
-	}
-	return oc
-}
-
-func (oc *OperationConfig) SetFieldsAuto(fields map[string]func() any) *OperationConfig {
-	if oc.fieldFuncs == nil {
-		oc.fieldFuncs = make(map[string]func(any) any)
-	}
-	for k, v := range fields {
-		oc.fieldFuncs[k] = func(_ any) any {
-			return v()
-		}
-	}
-	return oc
-}
-
 type Config struct {
 	post   *OperationConfig
 	get    *OperationConfig
