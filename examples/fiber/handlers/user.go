@@ -66,10 +66,6 @@ func generatPostUsername(id int64) string {
 	return fmt.Sprintf("default_post_user_%d", id)
 }
 
-func generateDownloadFilePath(id int64) string {
-	return fmt.Sprintf("/test/download_%d.txt", id)
-}
-
 func init() {
 	rest.Configure(func(c *rest.Config) {
 		c.Post().SetFieldFunc("Username", func(res any) any {
@@ -163,4 +159,3 @@ func SetField(c *fiber.Ctx) error {
 		SetField("Username", "set_field_value").
 		Respond()
 }
-

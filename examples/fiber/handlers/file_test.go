@@ -128,7 +128,8 @@ func TestUploadFile_Success(t *testing.T) {
 		t.Fatalf("expected status 201, got %d", resp.StatusCode)
 	}
 
-	uploadedFiles, err := os.ReadDir(filesDir)
+	testSubDir := filepath.Join(filesDir, "test")
+	uploadedFiles, err := os.ReadDir(testSubDir)
 	if err != nil {
 		t.Fatalf("failed to read files directory: %v", err)
 	}
@@ -137,7 +138,7 @@ func TestUploadFile_Success(t *testing.T) {
 		t.Fatal("expected at least 1 file to be uploaded")
 	}
 
-	savedPath := filepath.Join(filesDir, uploadedFiles[0].Name())
+	savedPath := filepath.Join(testSubDir, uploadedFiles[0].Name())
 	savedContent, err := os.ReadFile(savedPath)
 	if err != nil {
 		t.Fatalf("failed to read saved file: %v", err)
@@ -269,7 +270,8 @@ func TestUploadAndDownloadCycle(t *testing.T) {
 		t.Fatalf("expected status 201 for upload, got %d", uploadResp.StatusCode)
 	}
 
-	uploadedFiles, err := os.ReadDir(filesDir)
+	testSubDir = filepath.Join(filesDir, "test")
+	uploadedFiles, err := os.ReadDir(testSubDir)
 	if err != nil {
 		t.Fatalf("failed to read files directory: %v", err)
 	}
@@ -281,7 +283,7 @@ func TestUploadAndDownloadCycle(t *testing.T) {
 	uploadedFileName := uploadedFiles[0].Name()
 	t.Logf("Uploaded file: %s", uploadedFileName)
 
-	uploadedPath := filepath.Join(filesDir, uploadedFileName)
+	uploadedPath := filepath.Join(testSubDir, uploadedFileName)
 	downloadPath := filepath.Join(testSubDir, "download_123.txt")
 
 	uploadedContent, err := os.ReadFile(uploadedPath)
