@@ -44,6 +44,7 @@ type UserResponse struct {
 	Email           string          `json:"email"`
 	Enabled         bool            `json:"enabled"`
 	TestInt         int64           `json:"test_int"`
+	AppendField     string          `json:"append_field"`
 	Content         json.RawMessage `json:"content,omitempty"`
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at"`
@@ -97,6 +98,7 @@ func GetUser(c *fiber.Ctx) error {
 		Exec(func(ctx rest.Context, req struct{}, params struct{}, id any) (any, error) {
 			return database.GetUser(ctx.Context(), id.(int64))
 		}).
+		SetField("AppendField", "append_value").
 		Respond()
 }
 

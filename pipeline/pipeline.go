@@ -7,6 +7,7 @@ package pipeline
 
 import (
 	"fmt"
+	"reflect"
 	"strconv"
 
 	"github.com/otmc-sw/rest/config"
@@ -226,19 +227,23 @@ func (p *Pipeline[Req, Params, Entity, Res]) Respond() error {
 
 	res := mapper.Map[Res](*p.entity)
 
-	globalCfg := config.GetGlobalConfig()
-	if globalCfg != nil {
+	applyFields := func(item any, source string) {
+		globalCfg := config.GetGlobalConfig()
+		if globalCfg == nil {
+			return
+		}
+
 		preConfig := globalCfg.Pre()
 		if preConfig != nil {
 			fields := preConfig.GetFields()
 			for key, value := range fields {
-				mapper.SetField(&res, key, value)
+				setFieldAny(item, key, value)
 				debugger.Pipeline("GlobalConfig[pre]: %s = %v", key, value)
 			}
 			fieldFuncs := preConfig.GetFieldFuncs()
 			for key, fn := range fieldFuncs {
-				value := fn(res)
-				mapper.SetField(&res, key, value)
+				value := fn(item)
+				setFieldAny(item, key, value)
 				debugger.Pipeline("GlobalConfigFunc[pre]: %s = %v", key, value)
 			}
 		}
@@ -247,23 +252,33 @@ func (p *Pipeline[Req, Params, Entity, Res]) Respond() error {
 		if postConfig != nil {
 			fields := postConfig.GetFields()
 			for key, value := range fields {
-				mapper.SetField(&res, key, value)
+				setFieldAny(item, key, value)
 				debugger.Pipeline("GlobalConfig[post]: %s = %v", key, value)
 			}
 			fieldFuncs := postConfig.GetFieldFuncs()
 			for key, fn := range fieldFuncs {
-				value := fn(res)
-				mapper.SetField(&res, key, value)
+				value := fn(item)
+				setFieldAny(item, key, value)
 				debugger.Pipeline("GlobalConfigFunc[post]: %s = %v", key, value)
+			}
+		}
+
+		if p.customFields != nil {
+			for key, value := range p.customFields {
+				setFieldAny(item, key, value)
+				debugger.Pipeline("SetFields: %s = %v", key, value)
 			}
 		}
 	}
 
-	if p.customFields != nil {
-		for key, value := range p.customFields {
-			mapper.SetField(&res, key, value)
-			debugger.Pipeline("SetFields: %s = %v", key, value)
+	resVal := reflect.ValueOf(res)
+	if resVal.Kind() == reflect.Slice || resVal.Kind() == reflect.Array {
+		for i := 0; i < resVal.Len(); i++ {
+			item := resVal.Index(i).Addr().Interface()
+			applyFields(item, "array")
 		}
+	} else {
+		applyFields(&res, "single")
 	}
 
 	debugger.Pipeline("Respond success")
@@ -304,3 +319,40 @@ func (p *Pipeline[Req, Params, Entity, Res]) ensureID() {
 }
 
 func Validate() *validator.Validator { return validator.New() }
+
+func setFieldAny(item any, fieldName string, value any) {
+	itemVal := reflect.ValueOf(item)
+	if itemVal.Kind() != reflect.Ptr || itemVal.IsNil() {
+		return
+	}
+	elem := itemVal.Elem()
+	if elem.Kind() != reflect.Struct {
+		return
+	}
+	field := elem.FieldByName(fieldName)
+	if !field.IsValid() || !field.CanSet() {
+		return
+	}
+	fieldVal := reflect.ValueOf(value)
+	if fieldVal.Type().AssignableTo(field.Type()) {
+		field.Set(fieldVal)
+	} else if field.Kind() == reflect.Int64 {
+		switch v := value.(type) {
+		case int64:
+			field.SetInt(v)
+		case int:
+			field.SetInt(int64(v))
+		case float64:
+			field.SetInt(int64(v))
+		}
+	} else if field.Kind() == reflect.Int {
+		switch v := value.(type) {
+		case int64:
+			field.SetInt(v)
+		case int:
+			field.SetInt(int64(v))
+		case float64:
+			field.SetInt(int64(v))
+		}
+	}
+}
