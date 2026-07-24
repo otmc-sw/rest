@@ -70,3 +70,14 @@ func UpdateFileContent(c *fiber.Ctx) error {
 		Source("./data/files" + filePath).
 		Respond()
 }
+
+func PreviewFileContent(c *fiber.Ctx) error {
+	id := c.Params("id")
+	idInt, _ := strconv.ParseInt(id, 10, 64)
+	filePath := generateDownloadFilePath(idInt)
+
+	return rest.
+		PreviewFileContent(FiberContext{Ctx: c}).
+		Source("./data/files" + filePath).
+		Respond()
+}

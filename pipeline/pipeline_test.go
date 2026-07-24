@@ -466,3 +466,59 @@ func TestRawPipelineNoHandler(t *testing.T) {
 		t.Fatal("expected error response to be written to context")
 	}
 }
+
+func TestPreviewFileContentPipeline(t *testing.T) {
+	tmpFile := filepath.Join(t.TempDir(), "preview.txt")
+	content := []byte("preview test content")
+	if err := os.WriteFile(tmpFile, content, 0644); err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+
+	fc := &fakeContext{
+		ctx:    stdc.Background(),
+		params: map[string]string{},
+		body:   []byte{},
+		header: http.Header{},
+	}
+
+	var fileContent FileContent
+	beforeCalled := false
+	afterCalled := false
+
+	err := PreviewFileContent(fc).
+		Source(tmpFile).
+		Bind(&fileContent).
+		Before(func(ctx restcontext.Context, fc *FileContent) error {
+			beforeCalled = true
+			if fc.Content != string(content) {
+				t.Fatalf("expected content %s, got %s", content, fc.Content)
+			}
+			return nil
+		}).
+		After(func(ctx restcontext.Context, fc *FileContent) error {
+			afterCalled = true
+			if fc.Size != int64(len(content)) {
+				t.Fatalf("expected size %d, got %d", len(content), fc.Size)
+			}
+			return nil
+		}).
+		Respond()
+
+	if err != nil {
+		t.Fatalf("preview file content pipeline failed: %v", err)
+	}
+
+	if !beforeCalled {
+		t.Fatal("expected before hook to be called")
+	}
+	if !afterCalled {
+		t.Fatal("expected after hook to be called")
+	}
+	if fileContent.Content != string(content) {
+		t.Fatalf("expected bound content %s, got %s", content, fileContent.Content)
+	}
+	if fc.wrote != tmpFile {
+		t.Fatalf("expected SendFile with %s, got %v", tmpFile, fc.wrote)
+	}
+}
+

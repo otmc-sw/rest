@@ -6,8 +6,11 @@
 package pipeline
 
 import (
+	"fmt"
 	"io"
+	"mime"
 	"os"
+	"path/filepath"
 
 	"github.com/otmc-sw/rest/context"
 	"github.com/otmc-sw/rest/debugger"
@@ -325,3 +328,161 @@ func (p *UpdateFileContentPipeline) respondError() error {
 
 var _ = ReadFileContent
 var _ = UpdateFileContent
+
+type PreviewFileContentPipeline struct {
+	ctx     context.Context
+	source  string
+	content *FileContent
+	before  func(context.Context, *FileContent) error
+	after   func(context.Context, *FileContent) error
+	err     error
+}
+
+func PreviewFileContent(ctx context.Context) *PreviewFileContentPipeline {
+	debugger.Pipeline("PreviewFileContent")
+	return &PreviewFileContentPipeline{
+		ctx: ctx,
+	}
+}
+
+func (p *PreviewFileContentPipeline) Source(path string) *PreviewFileContentPipeline {
+	if p.err != nil {
+		return p
+	}
+	debugger.PipelineStep("PreviewFileContent.Source", "path=%s", path)
+	p.source = path
+	return p
+}
+
+func (p *PreviewFileContentPipeline) Bind(fc *FileContent) *PreviewFileContentPipeline {
+	if p.err != nil {
+		return p
+	}
+	debugger.PipelineStep("PreviewFileContent.Bind", "binding file content")
+	p.content = fc
+	return p
+}
+
+func (p *PreviewFileContentPipeline) Before(fn func(context.Context, *FileContent) error) *PreviewFileContentPipeline {
+	if p.err != nil {
+		return p
+	}
+	debugger.PipelineStep("PreviewFileContent.Before", "registering before hook")
+	p.before = fn
+	return p
+}
+
+func (p *PreviewFileContentPipeline) After(fn func(context.Context, *FileContent) error) *PreviewFileContentPipeline {
+	if p.err != nil {
+		return p
+	}
+	debugger.PipelineStep("PreviewFileContent.After", "registering after hook")
+	p.after = fn
+	return p
+}
+
+func (p *PreviewFileContentPipeline) Respond() error {
+	debugger.PipelineStep("PreviewFileContent.Respond", "executing preview file content pipeline")
+
+	if p.err != nil {
+		return p.respondError()
+	}
+
+	if p.source == "" {
+		err := errors.New().Skip(2).BadRequest().Summary("source path is required").Build()
+		return err.Err()
+	}
+
+	debugger.PipelineStep("PreviewFileContent", "opening file for preview: %s", p.source)
+	fileInfo, err := os.Stat(p.source)
+	if err != nil {
+		if os.IsNotExist(err) {
+			debugger.Error(debugger.ComponentPipeline, "file not found: %s", p.source)
+			return errors.New().Skip(2).NotFound().
+				Summary("File not found").
+				Detail(err.Error()).
+				Send(p.ctx)
+		}
+		debugger.Error(debugger.ComponentPipeline, "failed to stat file: %v", err)
+		return errors.New().Skip(2).InternalError().
+			Summary("Failed to access file").
+			Detail(err.Error()).
+			Send(p.ctx)
+	}
+
+	f, err := os.Open(p.source)
+	if err != nil {
+		debugger.Error(debugger.ComponentPipeline, "failed to open file: %v", err)
+		return errors.New().Skip(2).InternalError().
+			Summary("Failed to open file").
+			Detail(err.Error()).
+			Send(p.ctx)
+	}
+	defer f.Close()
+
+	content, err := io.ReadAll(f)
+	if err != nil {
+		debugger.Error(debugger.ComponentPipeline, "failed to read file content: %v", err)
+		return errors.New().Skip(2).InternalError().
+			Summary("Failed to read file content").
+			Detail(err.Error()).
+			Send(p.ctx)
+	}
+
+	fileContent := &FileContent{
+		Content: string(content),
+		Size:    fileInfo.Size(),
+	}
+
+	if p.before != nil {
+		debugger.PipelineStep("PreviewFileContent", "executing before hook")
+		if err := p.before(p.ctx, fileContent); err != nil {
+			debugger.Error(debugger.ComponentPipeline, "before hook failed: %v", err)
+			return errors.New().Skip(2).InternalError().
+				Summary("Preview aborted by before hook").
+				Detail(err.Error()).
+				Send(p.ctx)
+		}
+	}
+
+	if p.after != nil {
+		debugger.PipelineStep("PreviewFileContent", "executing after hook")
+		if err := p.after(p.ctx, fileContent); err != nil {
+			debugger.Error(debugger.ComponentPipeline, "after hook failed: %v", err)
+			return errors.New().Skip(2).InternalError().
+				Summary("Preview after hook failed").
+				Detail(err.Error()).
+				Send(p.ctx)
+		}
+	}
+
+	if p.content != nil {
+		*p.content = *fileContent
+	}
+
+	fileName := filepath.Base(p.source)
+	mimeType := mime.TypeByExtension(filepath.Ext(fileName))
+	if mimeType != "" {
+		p.ctx.SetHeader("Content-Type", mimeType)
+	}
+	p.ctx.SetHeader("Content-Disposition", fmt.Sprintf(`inline; filename="%s"`, fileName))
+	p.ctx.SetHeader("X-Content-Type-Options", "nosniff")
+
+	debugger.PipelineStep("PreviewFileContent", "sending file inline: %s", p.source)
+	return p.ctx.SendFile(p.source)
+}
+
+func (p *PreviewFileContentPipeline) respondError() error {
+	debugger.Error(debugger.ComponentPipeline, "PreviewFileContent error: %v", p.err)
+	if appErr, ok := p.err.(errors.Error); ok {
+		return errors.New().Skip(3).
+			Code(appErr.Details.Code).
+			Summary("Preview File Content Failed").
+			Detail(p.err).
+			Send(p.ctx)
+	}
+	return errors.New().Skip(3).BadRequest().Summary("Preview File Content Failed").Detail(p.err).Send(p.ctx)
+}
+
+var _ = PreviewFileContent
+

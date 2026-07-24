@@ -125,7 +125,9 @@ func Runner() {
 	app.Get("/set/fields/:id", handlers.SetFields)
 	app.Get("/set/field/:id", handlers.SetField)
 
-	app.Get("/download/file", handlers.DownloadFile)
+	app.Get("/download/file/:id", handlers.DownloadFile)
+	app.Get("/preview/file/:id", handlers.PreviewFileContent)
+	app.Get("/read/file/:id", handlers.ReadFileContent)
 	app.Post("/upload/file", handlers.UploadFile)
 
 	quit := make(chan os.Signal, 1)

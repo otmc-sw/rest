@@ -42,6 +42,8 @@ type ReadFileContentPipeline = pipeline.ReadFileContentPipeline
 
 type UpdateFileContentPipeline = pipeline.UpdateFileContentPipeline
 
+type PreviewFileContentPipeline = pipeline.PreviewFileContentPipeline
+
 func Configure(fn func(*Config)) {
 	config.Configure(fn)
 }
@@ -84,6 +86,10 @@ func ReadFileContent(ctx Context) *ReadFileContentPipeline {
 
 func UpdateFileContent(ctx Context) *UpdateFileContentPipeline {
 	return pipeline.UpdateFileContent(ctx)
+}
+
+func PreviewFileContent(ctx Context) *PreviewFileContentPipeline {
+	return pipeline.PreviewFileContent(ctx)
 }
 
 func Register[Src any, Dst any](fn func(Src) Dst) {
