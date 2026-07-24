@@ -68,10 +68,6 @@ func Delete[Req any, Params any, Entity any, Res any](ctx Context) *Pipeline[Req
 	return pipeline.Delete[Req, Params, Entity, Res](ctx)
 }
 
-func Raw(ctx Context) RawHandler {
-	return pipeline.Raw(ctx)
-}
-
 func Download(ctx Context) *DownloadPipeline {
 	return pipeline.Download(ctx)
 }
