@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strconv"
 
+	"github.com/google/uuid"
 	"github.com/otmc-sw/rest/config"
 	"github.com/otmc-sw/rest/context"
 	"github.com/otmc-sw/rest/debugger"
@@ -21,8 +22,7 @@ import (
 )
 
 type Handler[Req any, Entity any] func(ctx context.Context, req Req, id any) (Entity, error)
-type ExecHandler[Req any] func(ctx context.Context, req Req, id any) (any, error)
-type PatchHandler[Req any, Params any] func(ctx context.Context, req Req, params Params, id any) (any, error)
+type ExecHandler[Req any, Params any] func(ctx context.Context, req Req, params Params, id any) (any, error)
 
 type RawHandler interface {
 	Exec(fn func(context.Context) error) RawHandler
@@ -48,45 +48,42 @@ type Pipeline[Req any, Params any, Entity any, Res any] struct {
 	params       Params
 	customFields map[string]any
 	operation    string
+	autoUUID     bool
 }
 
-func newPipeline[Req any, Params any, Entity any, Res any](ctx context.Context, status int) *Pipeline[Req, Params, Entity, Res] {
-	return &Pipeline[Req, Params, Entity, Res]{ctx: ctx, status: status}
+func newPipeline[Req any, Params any, Entity any, Res any](ctx context.Context, status int, op string) *Pipeline[Req, Params, Entity, Res] {
+	return &Pipeline[Req, Params, Entity, Res]{
+		ctx:       ctx,
+		status:    status,
+		operation: op,
+	}
 }
 
 func Create[Req any, Params any, Entity any, Res any](ctx context.Context) *Pipeline[Req, Params, Entity, Res] {
 	debugger.Pipeline("Create[%T, %T]", *new(Req), *new(Entity))
-	p := newPipeline[Req, Params, Entity, Res](ctx, 201)
-	p.operation = "Post"
+	p := newPipeline[Req, Params, Entity, Res](ctx, 201, "Post")
+	p.autoUUID = true
 	return p
 }
 
 func Get[Req any, Params any, Entity any, Res any](ctx context.Context) *Pipeline[Req, Params, Entity, Res] {
 	debugger.Pipeline("Get[%T, %T]", *new(Req), *new(Entity))
-	p := newPipeline[Req, Params, Entity, Res](ctx, 200)
-	p.operation = "Get"
-	return p
+	return newPipeline[Req, Params, Entity, Res](ctx, 200, "Get")
 }
 
 func Update[Req any, Params any, Entity any, Res any](ctx context.Context) *Pipeline[Req, Params, Entity, Res] {
 	debugger.Pipeline("Update[%T, %T]", *new(Req), *new(Entity))
-	p := newPipeline[Req, Params, Entity, Res](ctx, 200)
-	p.operation = "Update"
-	return p
+	return newPipeline[Req, Params, Entity, Res](ctx, 200, "Update")
 }
 
 func Patch[Req any, Params any, Entity any, Res any](ctx context.Context) *Pipeline[Req, Params, Entity, Res] {
 	debugger.Pipeline("Patch[%T, %T, %T]", *new(Req), *new(Params), *new(Entity))
-	p := newPipeline[Req, Params, Entity, Res](ctx, 200)
-	p.operation = "Patch"
-	return p
+	return newPipeline[Req, Params, Entity, Res](ctx, 200, "Patch")
 }
 
 func Delete[Req any, Params any, Entity any, Res any](ctx context.Context) *Pipeline[Req, Params, Entity, Res] {
 	debugger.Pipeline("Delete")
-	p := newPipeline[Req, Params, Entity, Res](ctx, 204)
-	p.operation = "Delete"
-	return p
+	return newPipeline[Req, Params, Entity, Res](ctx, 204, "Delete")
 }
 
 func (p *Pipeline[Req, Params, Entity, Res]) Param(key string) *Pipeline[Req, Params, Entity, Res] {
@@ -159,6 +156,11 @@ func (p *Pipeline[Req, Params, Entity, Res]) SetField(key string, value any) *Pi
 	return p
 }
 
+func (p *Pipeline[Req, Params, Entity, Res]) AutoUUID(enable bool) *Pipeline[Req, Params, Entity, Res] {
+	p.autoUUID = enable
+	return p
+}
+
 func (p *Pipeline[Req, Params, Entity, Res]) Handle(h Handler[Req, Entity]) *Pipeline[Req, Params, Entity, Res] {
 	if p.err != nil || p.bound == nil {
 		return p
@@ -175,11 +177,16 @@ func (p *Pipeline[Req, Params, Entity, Res]) Handle(h Handler[Req, Entity]) *Pip
 		return p
 	}
 	debugger.Pipeline("Handle success")
+
+	if p.autoUUID {
+		ensureEntityUUID(&entity)
+	}
+
 	p.entity = &entity
 	return p
 }
 
-func (p *Pipeline[Req, Params, Entity, Res]) Exec(h PatchHandler[Req, Params]) *Pipeline[Req, Params, Entity, Res] {
+func (p *Pipeline[Req, Params, Entity, Res]) Exec(h ExecHandler[Req, Params]) *Pipeline[Req, Params, Entity, Res] {
 	if p.err != nil {
 		return p
 	}
@@ -208,17 +215,21 @@ func (p *Pipeline[Req, Params, Entity, Res]) Exec(h PatchHandler[Req, Params]) *
 	}
 	debugger.Pipeline("Exec success")
 
+	var e Entity
 	switch {
 	case result != nil:
-		e := mapper.Map[Entity](result)
-		p.entity = &e
+		e = mapper.Map[Entity](result)
 	case p.paramsFn != nil:
-		e := mapper.Map[Entity](p.params)
-		p.entity = &e
+		e = mapper.Map[Entity](p.params)
 	default:
-		e := mapper.Map[Entity](*p.bound)
-		p.entity = &e
+		e = mapper.Map[Entity](*p.bound)
 	}
+
+	if p.autoUUID {
+		ensureEntityUUID(&e)
+	}
+
+	p.entity = &e
 	return p
 }
 
@@ -230,6 +241,9 @@ func (p *Pipeline[Req, Params, Entity, Res]) Respond() error {
 	}
 	if p.entityFn != nil {
 		e := p.entityFn()
+		if p.autoUUID {
+			ensureEntityUUID(&e)
+		}
 		p.entity = &e
 	}
 	if p.entity == nil {
@@ -239,46 +253,34 @@ func (p *Pipeline[Req, Params, Entity, Res]) Respond() error {
 
 	res := mapper.Map[Res](*p.entity)
 
-	applyFields := func(item any, source string) {
+	applyFields := func(item any) {
 		globalCfg := config.GetGlobalConfig()
-		if globalCfg == nil {
-			return
-		}
+		if globalCfg != nil {
+			configs := []interface {
+				GetFields() map[string]any
+				GetFieldFuncs() map[string]func(any) any
+			}{globalCfg.Pre(), globalCfg.Post()}
 
-		preConfig := globalCfg.Pre()
-		if preConfig != nil {
-			fields := preConfig.GetFields()
-			for key, value := range fields {
-				setFieldAny(item, key, value)
-				debugger.Pipeline("GlobalConfig[pre]: %s = %v", key, value)
-			}
-			fieldFuncs := preConfig.GetFieldFuncs()
-			for key, fn := range fieldFuncs {
-				value := fn(item)
-				setFieldAny(item, key, value)
-				debugger.Pipeline("GlobalConfigFunc[pre]: %s = %v", key, value)
-			}
-		}
-
-		postConfig := globalCfg.Post()
-		if postConfig != nil {
-			fields := postConfig.GetFields()
-			for key, value := range fields {
-				setFieldAny(item, key, value)
-				debugger.Pipeline("GlobalConfig[post]: %s = %v", key, value)
-			}
-			fieldFuncs := postConfig.GetFieldFuncs()
-			for key, fn := range fieldFuncs {
-				value := fn(item)
-				setFieldAny(item, key, value)
-				debugger.Pipeline("GlobalConfigFunc[post]: %s = %v", key, value)
+			for _, cfg := range configs {
+				if cfg == nil {
+					continue
+				}
+				for k, v := range cfg.GetFields() {
+					setFieldAny(item, k, v)
+					debugger.Pipeline("GlobalConfig: %s = %v", k, v)
+				}
+				for k, fn := range cfg.GetFieldFuncs() {
+					val := fn(item)
+					setFieldAny(item, k, val)
+					debugger.Pipeline("GlobalConfigFunc: %s = %v", k, val)
+				}
 			}
 		}
 
 		if p.customFields != nil {
-			for key, value := range p.customFields {
-				setFieldAny(item, key, value)
-				debugger.Pipeline("SetFields: %s = %v", key, value)
+			for k, v := range p.customFields {
+				setFieldAny(item, k, v)
+				debugger.Pipeline("SetFields: %s = %v", k, v)
 			}
 		}
 	}
@@ -287,10 +289,10 @@ func (p *Pipeline[Req, Params, Entity, Res]) Respond() error {
 	if resVal.Kind() == reflect.Slice || resVal.Kind() == reflect.Array {
 		for i := 0; i < resVal.Len(); i++ {
 			item := resVal.Index(i).Addr().Interface()
-			applyFields(item, "array")
+			applyFields(item)
 		}
 	} else {
-		applyFields(&res, "single")
+		applyFields(&res)
 	}
 
 	debugger.Pipeline("Respond success")
@@ -320,17 +322,35 @@ func (p *Pipeline[Req, Params, Entity, Res]) ensureID() {
 		if n, err := strconv.ParseInt(s, 10, 64); err == nil {
 			p.id = n
 			debugger.Pipeline("autoParseID: %q → %d", s, n)
-		} else {
-			p.err = errors.New().Skip(2).BadRequest().
-				Summary("Invalid ID format").
-				Detail(fmt.Errorf("ID must be a number, got: %s", s)).
-				Build()
-			debugger.Error(debugger.ComponentPipeline, "Invalid ID format: %s", s)
 		}
 	}
 }
 
 func Validate() *validator.Validator { return validator.New() }
+
+func ensureEntityUUID(entity any) {
+	val := reflect.ValueOf(entity)
+	if val.Kind() != reflect.Ptr || val.IsNil() {
+		return
+	}
+	elem := val.Elem()
+	if elem.Kind() != reflect.Struct {
+		return
+	}
+
+	field := elem.FieldByName("ID")
+	if !field.IsValid() {
+		field = elem.FieldByName("Id")
+	}
+
+	if field.IsValid() && field.CanSet() && field.Kind() == reflect.String {
+		if field.String() == "" {
+			newUUID := uuid.NewString()
+			field.SetString(newUUID)
+			debugger.Pipeline("autoGenerateUUID: generated %s", newUUID)
+		}
+	}
+}
 
 func setFieldAny(item any, fieldName string, value any) {
 	itemVal := reflect.ValueOf(item)
@@ -345,10 +365,15 @@ func setFieldAny(item any, fieldName string, value any) {
 	if !field.IsValid() || !field.CanSet() {
 		return
 	}
+
 	fieldVal := reflect.ValueOf(value)
-	if fieldVal.Type().AssignableTo(field.Type()) {
+	if fieldVal.IsValid() && fieldVal.Type().AssignableTo(field.Type()) {
 		field.Set(fieldVal)
-	} else if field.Kind() == reflect.Int64 {
+		return
+	}
+
+	switch field.Kind() {
+	case reflect.Int, reflect.Int64:
 		switch v := value.(type) {
 		case int64:
 			field.SetInt(v)
@@ -356,15 +381,16 @@ func setFieldAny(item any, fieldName string, value any) {
 			field.SetInt(int64(v))
 		case float64:
 			field.SetInt(int64(v))
+		case string:
+			if n, err := strconv.ParseInt(v, 10, 64); err == nil {
+				field.SetInt(n)
+			}
 		}
-	} else if field.Kind() == reflect.Int {
-		switch v := value.(type) {
-		case int64:
-			field.SetInt(v)
-		case int:
-			field.SetInt(int64(v))
-		case float64:
-			field.SetInt(int64(v))
+	case reflect.String:
+		if v, ok := value.(fmt.Stringer); ok {
+			field.SetString(v.String())
+		} else {
+			field.SetString(fmt.Sprintf("%v", value))
 		}
 	}
 }
