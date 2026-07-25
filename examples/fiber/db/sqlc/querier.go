@@ -9,11 +9,16 @@ import (
 )
 
 type Querier interface {
+	CreateTest01(ctx context.Context, arg CreateTest01Params) (Test01, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	DeleteTest01(ctx context.Context, id string) error
 	DeleteUser(ctx context.Context, id int64) error
+	GetAllTest01s(ctx context.Context) ([]Test01, error)
 	GetAllUsers(ctx context.Context) ([]User, error)
+	GetTest01(ctx context.Context, id string) (Test01, error)
 	GetUser(ctx context.Context, id int64) (User, error)
 	ListUsers(ctx context.Context) ([]User, error)
+	UpdateTest01(ctx context.Context, arg UpdateTest01Params) (Test01, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 }
 

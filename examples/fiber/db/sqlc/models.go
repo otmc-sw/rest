@@ -8,6 +8,14 @@ import (
 	"database/sql"
 )
 
+type Test01 struct {
+	ID        string         `json:"id"`
+	Name      sql.NullString `json:"name"`
+	TestInt   sql.NullInt64  `json:"test_int"`
+	CreatedAt sql.NullTime   `json:"created_at"`
+	UpdatedAt sql.NullTime   `json:"updated_at"`
+}
+
 type User struct {
 	ID              int64          `json:"id"`
 	Username        string         `json:"username"`
