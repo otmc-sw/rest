@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @License Apache License 2.0
  * @Copyright (c) 2026 OTMC Softwares. OTMC Golang REST.
  * @Contributors Nguyen Van Trung, Nguyen Thi Hoai, OTMC Contributors.
@@ -170,9 +170,6 @@ func (p *Pipeline[Req, Params, Entity, Res]) Handle(h Handler[Req, Entity]) *Pip
 		return p
 	}
 
-	// if p.autoUUID {
-	// 	ensureUUID(p.bound)
-	// }
 
 	debugger.PipelineStep("Handle", "executing")
 	entity, err := h(p.ctx, *p.bound, p.id)
@@ -207,7 +204,6 @@ func (p *Pipeline[Req, Params, Entity, Res]) Exec(h ExecHandler[Req, Params]) *P
 
 	mapper.SetField(&p.params, "ID", p.id)
 
-	// Đảm bảo UUID tự động sinh trên Params thay vì Entity
 	if p.autoUUID {
 		ensureUUID(&p.params)
 	}
@@ -336,7 +332,6 @@ func (p *Pipeline[Req, Params, Entity, Res]) ensureID() {
 
 func Validate() *validator.Validator { return validator.New() }
 
-// ensureUUID kiểm tra và tự động sinh UUID v4 cho trường ID/Id kiểu string của struct (Params, Req, v.v.)
 func ensureUUID(item any) {
 	val := reflect.ValueOf(item)
 	if val.Kind() != reflect.Ptr || val.IsNil() {

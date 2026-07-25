@@ -1,6 +1,13 @@
+﻿/**
+ * @License Apache License 2.0
+ * @Copyright (c) 2026 OTMC Softwares. OTMC Golang REST.
+ * @Contributors Nguyen Van Trung, Nguyen Thi Hoai, OTMC Contributors.
+**/
 package handlers
 
 import (
+	"time"
+
 	"github.com/gofiber/fiber/v2"
 	rest "github.com/otmc-sw/rest"
 	db "github.com/otmc-sw/rest/examples/fiber/db/sqlc"
@@ -12,9 +19,11 @@ type Test01Request struct {
 }
 
 type Test01Response struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	TestInt int64  `json:"test_int"`
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	TestInt   int64     `json:"test_int"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 func CreateTest01(c *fiber.Ctx) error {
