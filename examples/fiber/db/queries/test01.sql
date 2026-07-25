@@ -1,8 +1,8 @@
 -- name: CreateTest01 :one
 INSERT INTO test01 
-    (id, name, test_int) 
+    (name, test_int) 
 VALUES
-    (?, ?, ?) 
+    (?, ?) 
 RETURNING *;
 
 -- name: GetTest01 :one

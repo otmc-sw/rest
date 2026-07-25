@@ -7,5 +7,6 @@
 --                             PRE-MIGRATION
 -- ======================================================================
 DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS test01;
 
 

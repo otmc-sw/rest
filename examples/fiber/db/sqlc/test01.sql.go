@@ -12,20 +12,19 @@ import (
 
 const createTest01 = `-- name: CreateTest01 :one
 INSERT INTO test01 
-    (id, name, test_int) 
+    (name, test_int) 
 VALUES
-    (?, ?, ?) 
+    (?, ?) 
 RETURNING id, name, test_int, created_at, updated_at
 `
 
 type CreateTest01Params struct {
-	ID      string         `json:"id"`
 	Name    sql.NullString `json:"name"`
 	TestInt sql.NullInt64  `json:"test_int"`
 }
 
 func (q *Queries) CreateTest01(ctx context.Context, arg CreateTest01Params) (Test01, error) {
-	row := q.db.QueryRowContext(ctx, createTest01, arg.ID, arg.Name, arg.TestInt)
+	row := q.db.QueryRowContext(ctx, createTest01, arg.Name, arg.TestInt)
 	var i Test01
 	err := row.Scan(
 		&i.ID,
