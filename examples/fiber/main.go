@@ -130,6 +130,12 @@ func Runner() {
 	app.Get("/read/file/:id", handlers.ReadFileContent)
 	app.Post("/upload/file", handlers.UploadFile)
 
+	app.Post("/test01", handlers.CreateTest01)
+	app.Get("/test01", handlers.GetAllTest01s)
+	app.Get("/test01/:id", handlers.GetTest01)
+	app.Patch("/test01/:id", handlers.UpdateTest01)
+	app.Delete("/test01/:id", handlers.DeleteTest01)
+
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 

@@ -1,0 +1,38 @@
+
+
+@baseUrl = http://localhost:3000
+
+### Create Test01 Entity
+# @name CreateTest01
+POST {{baseUrl}}/test01
+Content-Type: application/json
+
+{
+  "name": "Test01",
+  "test_int": 1
+}
+
+### Get the created Test01 Entity ID
+@createdId = {{CreateTest01.response.body.data.id}}
+
+### Get all Test01 Entities
+# @name GetAllTest01s
+GET {{baseUrl}}/test01
+
+### Get a Test01 Entity by ID
+# @name GetTest01
+GET {{baseUrl}}/test01/{{createdId}}
+
+### Update a Test01 Entity
+# @name UpdateTest01
+PATCH {{baseUrl}}/test01/{{createdId}}
+Content-Type: application/json
+
+{
+  "name": "Test01 Updated",
+  "test_int": 2
+}
+
+### Delete a Test01 Entity
+# @name DeleteTest01
+DELETE {{baseUrl}}/test01/{{createdId}}

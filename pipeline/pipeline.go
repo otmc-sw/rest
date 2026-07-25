@@ -169,6 +169,11 @@ func (p *Pipeline[Req, Params, Entity, Res]) Handle(h Handler[Req, Entity]) *Pip
 	if p.err != nil {
 		return p
 	}
+
+	// if p.autoUUID {
+	// 	ensureUUID(p.bound)
+	// }
+
 	debugger.PipelineStep("Handle", "executing")
 	entity, err := h(p.ctx, *p.bound, p.id)
 	if err != nil {
@@ -177,10 +182,6 @@ func (p *Pipeline[Req, Params, Entity, Res]) Handle(h Handler[Req, Entity]) *Pip
 		return p
 	}
 	debugger.Pipeline("Handle success")
-
-	if p.autoUUID {
-		ensureEntityUUID(&entity)
-	}
 
 	p.entity = &entity
 	return p
@@ -206,6 +207,11 @@ func (p *Pipeline[Req, Params, Entity, Res]) Exec(h ExecHandler[Req, Params]) *P
 
 	mapper.SetField(&p.params, "ID", p.id)
 
+	// Đảm bảo UUID tự động sinh trên Params thay vì Entity
+	if p.autoUUID {
+		ensureUUID(&p.params)
+	}
+
 	debugger.PipelineStep("Exec", "executing")
 	result, err := h(p.ctx, *p.bound, p.params, p.id)
 	if err != nil {
@@ -225,10 +231,6 @@ func (p *Pipeline[Req, Params, Entity, Res]) Exec(h ExecHandler[Req, Params]) *P
 		e = mapper.Map[Entity](*p.bound)
 	}
 
-	if p.autoUUID {
-		ensureEntityUUID(&e)
-	}
-
 	p.entity = &e
 	return p
 }
@@ -241,9 +243,6 @@ func (p *Pipeline[Req, Params, Entity, Res]) Respond() error {
 	}
 	if p.entityFn != nil {
 		e := p.entityFn()
-		if p.autoUUID {
-			ensureEntityUUID(&e)
-		}
 		p.entity = &e
 	}
 	if p.entity == nil {
@@ -254,8 +253,7 @@ func (p *Pipeline[Req, Params, Entity, Res]) Respond() error {
 	res := mapper.Map[Res](*p.entity)
 
 	applyFields := func(item any) {
-		globalCfg := config.GetGlobalConfig()
-		if globalCfg != nil {
+		if globalCfg := config.GetGlobalConfig(); globalCfg != nil {
 			configs := []interface {
 				GetFields() map[string]any
 				GetFieldFuncs() map[string]func(any) any
@@ -328,8 +326,9 @@ func (p *Pipeline[Req, Params, Entity, Res]) ensureID() {
 
 func Validate() *validator.Validator { return validator.New() }
 
-func ensureEntityUUID(entity any) {
-	val := reflect.ValueOf(entity)
+// ensureUUID kiểm tra và tự động sinh UUID v4 cho trường ID/Id kiểu string của struct (Params, Req, v.v.)
+func ensureUUID(item any) {
+	val := reflect.ValueOf(item)
 	if val.Kind() != reflect.Ptr || val.IsNil() {
 		return
 	}
