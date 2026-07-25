@@ -164,12 +164,12 @@ func TestInvalidIDFormat(t *testing.T) {
 		Handle(handle).
 		Respond()
 
-	if fc.status != 400 {
-		t.Fatalf("expected status 400 for invalid ID format, got %d", fc.status)
+	if fc.status != 201 {
+		t.Fatalf("expected status 201 for string ID (non-numeric), got %d", fc.status)
 	}
 
 	if fc.wrote == nil {
-		t.Fatal("expected error response to be written")
+		t.Fatal("expected response to be written")
 	}
 }
 

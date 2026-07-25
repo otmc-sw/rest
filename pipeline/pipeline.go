@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @License Apache License 2.0
  * @Copyright (c) 2026 OTMC Softwares. OTMC Golang REST.
  * @Contributors Nguyen Van Trung, Nguyen Thi Hoai, OTMC Contributors.
@@ -213,7 +213,17 @@ func (p *Pipeline[Req, Params, Entity, Res]) Exec(h ExecHandler[Req, Params]) *P
 	}
 
 	debugger.PipelineStep("Exec", "executing")
-	result, err := h(p.ctx, *p.bound, p.params, p.id)
+	var result any
+	var err error
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				debugger.Error(debugger.ComponentPipeline, "Exec panic: %v", r)
+				err = fmt.Errorf("handler panic: %v", r)
+			}
+		}()
+		result, err = h(p.ctx, *p.bound, p.params, p.id)
+	}()
 	if err != nil {
 		debugger.Error(debugger.ComponentPipeline, "Exec: %v", err)
 		p.err = err
