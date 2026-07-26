@@ -1,44 +1,50 @@
 #
-# Apache License 2.0
-# Copyright (c) 2026 OTMC Softwares.
-# Contributors: Nguyen Van Trung, Nguyen Thi Hoai, OTMC Contributors.
+# OTMC License.
+# Copyright (c) 2026 OTMC Softwares. All rights reserved.
+# Contributors: Trung Ng, OTMC Authors.
 #
+
+param(
+    [Alias('u')]
+    [switch]$Update
+)
 
 $global:TOP = Get-Location
 
+$Target = Join-Path $HOME ".otmc\scripts"
 
-function e   { Set-Location $TOP; & "$TOP\env.ps1" @args }
-function p   { Set-Location $TOP; & "$TOP\scripts\push.ps1" @args }
-function tag { Set-Location $TOP; & "$TOP\scripts\tag.ps1" @args }
-function t   { Set-Location $TOP; & "$TOP\scripts\test.ps1" @args }
-function f   { Set-Location $TOP; & "$TOP\scripts\format.ps1" @args }
-
-
-function Show-Help {
-    Write-Host ""
-    Write-Host "  ╔═══════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "  ║             OTMC REST - Environment Help                      ║" -ForegroundColor Cyan
-    Write-Host "  ╚═══════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
-    Write-Host ""
-    Write-Host "  COMMANDS:" -ForegroundColor Yellow
-    Write-Host "    e                     Load environment"
-    Write-Host "    p                     Push changes to remote repository"
-    Write-Host "    t                     Run tests"
-    Write-Host "    f                     Format code"
-    Write-Host "    tag b <tag>           Create tag at current HEAD"
-    Write-Host "    tag r <tag>           Restore current branch to tag (force push)"
-    Write-Host ""
-    Write-Host "  EXAMPLES:" -ForegroundColor Yellow
-    Write-Host "    tag b v0.1.1          Create tag v0.1.1 at HEAD"
-    Write-Host "    tag r v0.1.1          Restore branch to tag v0.1.1"
-    Write-Host "    t                     Run tests"
-    Write-Host "    f                     Format code"
-    Write-Host ""
+if (Test-Path (Join-Path $Target ".git")) {
+    if ($Update) {
+        Write-Host "### 📚 Updating scripts ..." -ForegroundColor DarkBlue
+        git -C $Target pull
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host ">>> ❌ Failed to update scripts!" -ForegroundColor Red
+            exit 1
+        }
+    }
+} else {
+    Write-Host "### 📁 Cloning scripts ..." -ForegroundColor DarkGreen
+    New-Item -ItemType Directory -Force -Path (Split-Path $Target) | Out-Null
+    git clone https://github.com/otmc-sw/scripts.git $Target
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host ">>> ❌ Failed to clone scripts!" -ForegroundColor Red
+        exit 1
+    }
 }
 
-Show-Help
+function e   { Set-Location $TOP; & "$TOP\env.ps1" @args }
+function s   { Set-Location $TOP; & "$Target\project\setup.ps1" @args }
+function run { Set-Location $TOP; & "$Target\project\run.ps1" @args }
+function t   { Set-Location $TOP; & "$Target\project\test.ps1" @args }
+function p   { Set-Location $TOP; & "$Target\project\push.ps1" @args }
+function f   { Set-Location $TOP; & "$Target\project\format.ps1" @args }
+function b   { Set-Location $TOP; & "$Target\project\build.ps1" @args }
+function tag { Set-Location $TOP; & "$Target\project\tag.ps1" @args }
+function u   { Set-Location $TOP; & "$Target\project\upgrade.ps1" @args }
+
 Write-Host ""
-Write-Host "   >>> Environment Loaded on Windows!" -ForegroundColor Blue
-Write-Host "   >>> Source directory: '$TOP'" -ForegroundColor Blue
+Write-Host ">>> Environment Loaded on Windows!" -ForegroundColor DarkGreen
+Write-Host ">>> Source directory:  $TOP" -ForegroundColor DarkGreen
+Write-Host ">>> Tool directory:    $Target" -ForegroundColor DarkGreen
 Write-Host ""
 
