@@ -14,10 +14,6 @@ import (
 	db "github.com/otmc-sw/rest/examples/fiber/db/sqlc"
 )
 
-type ProfileResponse struct {
-	Bio string `json:"bio,omitempty"`
-}
-
 type UserRequest struct {
 	Username        *string          `json:"username"`
 	FullName        *string          `json:"full_name,omitempty"`
@@ -29,7 +25,6 @@ type UserRequest struct {
 	TestIntArray    *[]int           `json:"test_int_array,omitempty"`
 	TestMap         *map[string]int  `json:"test_map,omitempty"`
 	TestJson        *json.RawMessage `json:"test_json,omitempty"`
-	Profile         *ProfileRequest  `json:"profile"`
 }
 
 type ProfileRequest struct {
@@ -51,7 +46,6 @@ type UserResponse struct {
 	TestIntArray    []int           `json:"test_int_array,omitempty"`
 	TestMap         map[string]int  `json:"test_map,omitempty"`
 	TestJson        json.RawMessage `json:"test_json,omitempty"`
-	Profile         ProfileResponse `json:"profile"`
 }
 
 func ValidateUser(r UserRequest) error {
@@ -59,12 +53,6 @@ func ValidateUser(r UserRequest) error {
 		Required(r.Username).
 		Email(r.Email).
 		Process()
-}
-
-func CustomFields() map[string]any {
-	return map[string]any{
-		"Username": "custom_fields_username",
-	}
 }
 
 func CreateUser(c *fiber.Ctx) error {
@@ -106,41 +94,11 @@ func UpdateUser(c *fiber.Ctx) error {
 		Respond()
 }
 
-func PatchUser(c *fiber.Ctx) error {
-	return rest.
-		Patch[UserRequest, db.UpdateUserParams, db.User, UserResponse](FiberContext{Ctx: c}).
-		Bind().
-		Exec(func(ctx rest.Context, req UserRequest, params db.UpdateUserParams, id any) (any, error) {
-			return database.UpdateUser(ctx.Context(), params)
-		}).
-		Respond()
-}
-
 func DeleteUser(c *fiber.Ctx) error {
 	return rest.
 		Delete[struct{}, struct{}, struct{}, UserResponse](FiberContext{Ctx: c}).
 		Exec(func(ctx rest.Context, req struct{}, params struct{}, id any) (any, error) {
 			return nil, database.DeleteUser(ctx.Context(), id.(int64))
 		}).
-		Respond()
-}
-
-func SetFields(c *fiber.Ctx) error {
-	return rest.
-		Get[struct{}, struct{}, db.User, UserResponse](FiberContext{Ctx: c}).
-		Exec(func(ctx rest.Context, req struct{}, params struct{}, id any) (any, error) {
-			return database.GetUser(ctx.Context(), id.(int64))
-		}).
-		SetFields(CustomFields()).
-		Respond()
-}
-
-func SetField(c *fiber.Ctx) error {
-	return rest.
-		Get[struct{}, struct{}, db.User, UserResponse](FiberContext{Ctx: c}).
-		Exec(func(ctx rest.Context, req struct{}, params struct{}, id any) (any, error) {
-			return database.GetUser(ctx.Context(), id.(int64))
-		}).
-		SetField("Username", "set_field_value").
 		Respond()
 }

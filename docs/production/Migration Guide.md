@@ -230,6 +230,44 @@ func CreateUser(c *fiber.Ctx) error {
 		}).
 		Respond()
 }
+
+func GetUser(c *fiber.Ctx) error {
+	return rest.
+		Get[struct{}, struct{}, db.User, UserResponse](FiberContext{Ctx: c}).
+		Exec(func(ctx rest.Context, req struct{}, params struct{}, id any) (any, error) {
+			return database.GetUser(ctx.Context(), id.(int64))
+		}).
+		Respond()
+}
+
+func GetAllUsers(c *fiber.Ctx) error {
+	return rest.
+		Get[struct{}, struct{}, []db.User, []UserResponse](FiberContext{Ctx: c}).
+		Exec(func(ctx rest.Context, req struct{}, params struct{}, id any) (any, error) {
+			return database.GetAllUsers(ctx.Context())
+		}).
+		Respond()
+}
+
+func UpdateUser(c *fiber.Ctx) error {
+	return rest.
+		Update[UserRequest, db.UpdateUserParams, db.User, UserResponse](FiberContext{Ctx: c}).
+		Bind().
+		Exec(func(ctx rest.Context, req UserRequest, params db.UpdateUserParams, id any) (any, error) {
+			return database.UpdateUser(ctx.Context(), params)
+		}).
+		Respond()
+}
+
+func DeleteUser(c *fiber.Ctx) error {
+	return rest.
+		Delete[struct{}, struct{}, struct{}, UserResponse](FiberContext{Ctx: c}).
+		Exec(func(ctx rest.Context, req struct{}, params struct{}, id any) (any, error) {
+			return nil, database.DeleteUser(ctx.Context(), id.(int64))
+		}).
+		Respond()
+}
+
 ```
 
 Các API khác (`GetUser`, `GetAllUsers`, `UpdateUser`, `DeleteUser`) refactor theo cùng pattern.

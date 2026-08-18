@@ -26,6 +26,12 @@ type Test01Response struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+func CustomFields() map[string]any {
+	return map[string]any{
+		"Name": "custom_fields_name",
+	}
+}
+
 func CreateTest01(c *fiber.Ctx) error {
 	return rest.
 		Create[Test01Request, db.CreateTest01Params, db.Test01, Test01Response](FiberContext{Ctx: c}).
@@ -70,5 +76,26 @@ func DeleteTest01(c *fiber.Ctx) error {
 		Exec(func(ctx rest.Context, req struct{}, params struct{}, id any) (any, error) {
 			return nil, database.DeleteTest01(ctx.Context(), id.(string))
 		}).
+		Respond()
+}
+
+
+func SetFields(c *fiber.Ctx) error {
+	return rest.
+		Get[struct{}, struct{}, db.User, UserResponse](FiberContext{Ctx: c}).
+		Exec(func(ctx rest.Context, req struct{}, params struct{}, id any) (any, error) {
+			return database.GetUser(ctx.Context(), id.(int64))
+		}).
+		SetFields(CustomFields()).
+		Respond()
+}
+
+func SetField(c *fiber.Ctx) error {
+	return rest.
+		Get[struct{}, struct{}, db.User, UserResponse](FiberContext{Ctx: c}).
+		Exec(func(ctx rest.Context, req struct{}, params struct{}, id any) (any, error) {
+			return database.GetUser(ctx.Context(), id.(int64))
+		}).
+		SetField("Username", "set_field_value").
 		Respond()
 }
