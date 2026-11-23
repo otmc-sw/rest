@@ -24,6 +24,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/otmc-sw/logger"
 
 	"github.com/otmc-sw/rest/otmc/httpapi"
 	"github.com/otmc-sw/rest/otmc/schema"
@@ -86,15 +87,20 @@ func (a *App) Store() *store.Manager { return a.store }
 // Run builds the schema, migrates the database, registers all routes and
 // serves until SIGINT/SIGTERM. It blocks.
 func (a *App) Run() error {
+	if a.cfg.Debug {
+		logger.SetLevel(logger.DebugLevel)
+		logger.Debug("🐛 Debug mode enabled.")
+	}
+	logger.Info("🚀 Initializing %s...", a.cfg.Name)
 	if err := a.build(); err != nil {
 		return err
 	}
 
 	addr := fmt.Sprintf(":%d", a.cfg.Port)
 	go func() {
-		fmt.Printf("OTMC %s listening on http://localhost%s\n", a.cfg.Name, addr)
+		logger.Info("🚀 Server starting at http://localhost%s", addr)
 		if err := a.fiber.Listen(addr); err != nil {
-			fmt.Fprintf(os.Stderr, "otmc: server error: %v\n", err)
+			logger.Error("❌ otmc: server error: %v", err)
 		}
 	}()
 
@@ -102,23 +108,35 @@ func (a *App) Run() error {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
+	logger.Info("🛑 Shutdown signal received.")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	fmt.Println("otmc: shutting down...")
+	logger.Info("⏳ Shutting down server...")
 	return a.fiber.ShutdownWithContext(ctx)
 }
 
 // build performs schema parsing, DB migration and route registration.
 // Exposed internally so tests can exercise it without blocking on Listen.
 func (a *App) build() error {
-	for _, m := range a.models {
-		model, err := schema.Parse(m)
-		if err != nil {
-			return err
+	if len(a.models) > 0 {
+		logger.Info("📋 Parsing %d model(s)...", len(a.models))
+		for _, m := range a.models {
+			model, err := schema.Parse(m)
+			if err != nil {
+				return err
+			}
+			a.schema = append(a.schema, model)
+			logger.Info("✅ Model parsed: %s (table: %s)", model.Name, model.Table)
 		}
-		a.schema = append(a.schema, model)
+	} else {
+		logger.Info("📋 No models registered.")
 	}
 
+	driver := a.cfg.Database.Driver
+	if driver == "" {
+		driver = "sqlite"
+	}
+	logger.Info("💾 Connecting to %s database...", driver)
 	mgr, err := store.Open(store.Config{
 		Driver: a.cfg.Database.Driver,
 		DSN:    a.cfg.Database.DSN,
@@ -126,16 +144,29 @@ func (a *App) build() error {
 	if err != nil {
 		return err
 	}
+	logger.Info("✅ Database connection established.")
 	a.store = mgr
-	if err := mgr.Register(a.schema...); err != nil {
-		return err
+
+	for _, model := range a.schema {
+		logger.Info("🗄️  Migrating table %s...", model.Table)
+		if err := mgr.Register(model); err != nil {
+			return err
+		}
+		logger.Info("✅ Table %s ready.", model.Table)
 	}
 
+	logger.Info("🧩 Initializing web server...")
 	a.fiber = fiber.New(fiber.Config{
 		AppName:      a.cfg.Name,
 		DisableStartupMessage: true,
 	})
 	a.fiber.Use(recover.New())
+	a.fiber.Use(func(c *fiber.Ctx) error {
+		start := time.Now()
+		err := c.Next()
+		logger.Request(c.Method(), c.OriginalURL(), c.Response().StatusCode(), time.Since(start), c.IP())
+		return err
+	})
 	a.fiber.Use(cors.New(cors.Config{
 		AllowOriginsFunc: func(origin string) bool { return true },
 		AllowMethods:     "GET,POST,PUT,PATCH,DELETE,OPTIONS",
@@ -147,6 +178,8 @@ func (a *App) build() error {
 		return c.JSON(fiber.Map{"status": "ok", "app": a.cfg.Name})
 	})
 
+	logger.Info("🔌 Registering API routes under %s...", a.cfg.APIPrefix)
 	httpapi.RegisterRoutes(a.fiber, a.cfg.APIPrefix, mgr.Repositories())
+	logger.Info("✅ API routes registered.")
 	return nil
 }
