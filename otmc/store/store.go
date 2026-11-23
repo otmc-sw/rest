@@ -7,7 +7,10 @@ package store
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"reflect"
+	"strings"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
@@ -40,6 +43,9 @@ func Open(cfg Config) (*Manager, error) {
 		if dsn == "" {
 			dsn = "otmc.db"
 		}
+		if err := ensureSQLiteDir(dsn); err != nil {
+			return nil, err
+		}
 		dialector = sqlite.Open(dsn)
 	case "postgres", "postgresql":
 		dialector = postgres.Open(cfg.DSN)
@@ -53,6 +59,26 @@ func Open(cfg Config) (*Manager, error) {
 		return nil, fmt.Errorf("otmc: open database: %w", err)
 	}
 	return &Manager{DB: db, byModel: map[reflect.Type]*Repository{}}, nil
+}
+
+// ensureSQLiteDir creates the parent directory for file-based sqlite DSNs.
+// In-memory DSNs (":memory:", "file::memory:...") are skipped.
+func ensureSQLiteDir(dsn string) error {
+	path := strings.TrimPrefix(dsn, "file:")
+	if i := strings.IndexAny(path, "?"); i >= 0 {
+		path = path[:i]
+	}
+	if path == "" || path == ":memory:" || strings.HasPrefix(path, ":memory:") {
+		return nil
+	}
+	dir := filepath.Dir(path)
+	if dir == "" || dir == "." {
+		return nil
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("otmc: create database directory %q: %w", dir, err)
+	}
+	return nil
 }
 
 // Register parses schema metadata, runs AutoMigrate and creates repositories.

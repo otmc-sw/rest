@@ -7,23 +7,15 @@ package main
 
 import (
 	"log"
-	"os"
-	"strconv"
 
 	"github.com/otmc-sw/rest/examples/otmc/models"
 	"github.com/otmc-sw/rest/otmc"
 )
 
 func main() {
-	port := 5007
-	if p := os.Getenv("PORT"); p != "" {
-		if n, err := strconv.Atoi(p); err == nil {
-			port = n
-		}
-	}
 	app := otmc.New(otmc.Config{
 		Name: "My Application",
-		Port: port,
+		Port: 6000,
 
 		Database: otmc.DatabaseConfig{
 			Driver: "sqlite",
