@@ -175,7 +175,6 @@ func (a *App) Initializer() error {
 	logger.Info("🧩 Initializing web server...")
 	a.fiber = fiber.New(fiber.Config{
 		AppName:               a.cfg.Name,
-		DisableStartupMessage: true,
 	})
 	a.fiber.Use(recover.New())
 	a.fiber.Use(func(c *fiber.Ctx) error {
