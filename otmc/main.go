@@ -167,7 +167,7 @@ func (a *App) Initializer() error {
 
 	// Load initial data if configured
 	if a.cfg.InitialData != "" {
-		if err := a.loadInitialData(mgr); err != nil {
+		if err := a.InitialDataLoader(mgr); err != nil {
 			return err
 		}
 	}
@@ -201,8 +201,8 @@ func (a *App) Initializer() error {
 	return nil
 }
 
-// loadInitialData loads and executes SQL files matching the InitialData pattern.
-func (a *App) loadInitialData(mgr *store.Manager) error {
+// InitialDataLoader loads and executes SQL files matching the InitialData pattern.
+func (a *App) InitialDataLoader(mgr *store.Manager) error {
 	matches, err := filepath.Glob(a.cfg.InitialData)
 	if err != nil {
 		return fmt.Errorf("failed to glob initial data pattern: %w", err)
