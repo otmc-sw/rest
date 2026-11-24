@@ -37,6 +37,7 @@ type Config struct {
 	Port      int    // default 5007
 	APIPrefix string // default "/api"
 	Debug     bool
+	Banner    string // optional startup banner
 
 	Database DatabaseConfig
 }
@@ -87,6 +88,9 @@ func (a *App) Store() *store.Manager { return a.store }
 // Run builds the schema, migrates the database, registers all routes and
 // serves until SIGINT/SIGTERM. It blocks.
 func (a *App) Runner() error {
+	if a.cfg.Banner != "" {
+		fmt.Println(a.cfg.Banner)
+	}
 	if a.cfg.Debug {
 		logger.SetLevel(logger.DebugLevel)
 		logger.Debug("🐛 Debug mode enabled.")
