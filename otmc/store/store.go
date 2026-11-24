@@ -41,7 +41,7 @@ func Open(cfg Config) (*Manager, error) {
 	case "", "sqlite":
 		dsn := cfg.DSN
 		if dsn == "" {
-			dsn = "otmc.db"
+			dsn = "./data/app.db"
 		}
 		if err := ensureSQLiteDir(dsn); err != nil {
 			return nil, err

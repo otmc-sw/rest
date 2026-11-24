@@ -86,13 +86,13 @@ func (a *App) Store() *store.Manager { return a.store }
 
 // Run builds the schema, migrates the database, registers all routes and
 // serves until SIGINT/SIGTERM. It blocks.
-func (a *App) Run() error {
+func (a *App) Runner() error {
 	if a.cfg.Debug {
 		logger.SetLevel(logger.DebugLevel)
 		logger.Debug("🐛 Debug mode enabled.")
 	}
-	logger.Info("🚀 Initializing %s...", a.cfg.Name)
-	if err := a.build(); err != nil {
+	logger.Info("✨ Initializing %s...", a.cfg.Name)
+	if err := a.Initializer(); err != nil {
 		return err
 	}
 
@@ -117,9 +117,9 @@ func (a *App) Run() error {
 
 // build performs schema parsing, DB migration and route registration.
 // Exposed internally so tests can exercise it without blocking on Listen.
-func (a *App) build() error {
+func (a *App) Initializer() error {
 	if len(a.models) > 0 {
-		logger.Info("📋 Parsing %d model(s)...", len(a.models))
+		logger.Info("📝 Parsing %d model(s)...", len(a.models))
 		for _, m := range a.models {
 			model, err := schema.Parse(m)
 			if err != nil {
@@ -148,7 +148,7 @@ func (a *App) build() error {
 	a.store = mgr
 
 	for _, model := range a.schema {
-		logger.Info("🗄️  Migrating table %s...", model.Table)
+		logger.Info("📚  Migrating table %s...", model.Table)
 		if err := mgr.Register(model); err != nil {
 			return err
 		}
@@ -157,7 +157,7 @@ func (a *App) build() error {
 
 	logger.Info("🧩 Initializing web server...")
 	a.fiber = fiber.New(fiber.Config{
-		AppName:      a.cfg.Name,
+		AppName:               a.cfg.Name,
 		DisableStartupMessage: true,
 	})
 	a.fiber.Use(recover.New())
@@ -178,7 +178,7 @@ func (a *App) build() error {
 		return c.JSON(fiber.Map{"status": "ok", "app": a.cfg.Name})
 	})
 
-	logger.Info("🔌 Registering API routes under %s...", a.cfg.APIPrefix)
+	logger.Info("🌐 Registering API routes under %s...", a.cfg.APIPrefix)
 	httpapi.RegisterRoutes(a.fiber, a.cfg.APIPrefix, mgr.Repositories())
 	logger.Info("✅ API routes registered.")
 	return nil

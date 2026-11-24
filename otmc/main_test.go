@@ -21,25 +21,25 @@ type testRole struct {
 }
 
 type testUser struct {
-	ID        uint64  `json:"id" otmc:"primary;auto"`
-	Name      string  `json:"name" otmc:"required"`
-	Email     string  `json:"email" otmc:"required;unique"`
-	Password  string  `json:"-"` // json:"-" -> not part of the API schema
-	RoleID    uint64  `json:"role_id"`
+	ID        uint64    `json:"id" otmc:"primary;auto"`
+	Name      string    `json:"name" otmc:"required"`
+	Email     string    `json:"email" otmc:"required;unique"`
+	Password  string    `json:"-"` // json:"-" -> not part of the API schema
+	RoleID    uint64    `json:"role_id"`
 	Role      *testRole `json:"role,omitempty"`
-	CreatedAt string  `json:"created_at"`
+	CreatedAt string    `json:"created_at"`
 }
 
 func newTestApp(t *testing.T) *App {
 	t.Helper()
 	dsn := filepath.Join(t.TempDir(), "test.db")
 	app := New(Config{
-		Name: "Test App",
+		Name:     "Test App",
 		Database: DatabaseConfig{Driver: "sqlite", DSN: dsn},
 	})
 	app.Register(&testRole{}, &testUser{})
-	if err := app.build(); err != nil {
-		t.Fatalf("build: %v", err)
+	if err := app.Initializer(); err != nil {
+		t.Fatalf("Initializer: %v", err)
 	}
 	t.Cleanup(func() { app.Store().Close() })
 	return app
