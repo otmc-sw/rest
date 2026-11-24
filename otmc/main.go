@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -33,11 +34,12 @@ import (
 
 // Config configures the application.
 type Config struct {
-	Name      string
-	Port      int    // default 5007
-	APIPrefix string // default "/api"
-	Debug     bool
-	Banner    string // optional startup banner
+	Name        string
+	Port        int    // default 5007
+	APIPrefix   string // default "/api"
+	Debug       bool
+	Banner      string // optional startup banner file path
+	InitialData string // optional initial data SQL files pattern (e.g., "db/*.sql")
 
 	Database DatabaseConfig
 }
@@ -89,7 +91,11 @@ func (a *App) Store() *store.Manager { return a.store }
 // serves until SIGINT/SIGTERM. It blocks.
 func (a *App) Runner() error {
 	if a.cfg.Banner != "" {
-		fmt.Println(a.cfg.Banner)
+		if bannerContent, err := os.ReadFile(a.cfg.Banner); err == nil {
+			fmt.Println(string(bannerContent))
+		} else {
+			logger.Warn("⚠️  Could not read banner file: %v", err)
+		}
 	}
 	if a.cfg.Debug {
 		logger.SetLevel(logger.DebugLevel)
@@ -159,6 +165,13 @@ func (a *App) Initializer() error {
 		logger.Info("✅ Table %s ready.", model.Table)
 	}
 
+	// Load initial data if configured
+	if a.cfg.InitialData != "" {
+		if err := a.loadInitialData(mgr); err != nil {
+			return err
+		}
+	}
+
 	logger.Info("🧩 Initializing web server...")
 	a.fiber = fiber.New(fiber.Config{
 		AppName:               a.cfg.Name,
@@ -185,5 +198,30 @@ func (a *App) Initializer() error {
 	logger.Info("🌐 Registering API routes under %s...", a.cfg.APIPrefix)
 	httpapi.RegisterRoutes(a.fiber, a.cfg.APIPrefix, mgr.Repositories())
 	logger.Info("✅ API routes registered.")
+	return nil
+}
+
+// loadInitialData loads and executes SQL files matching the InitialData pattern.
+func (a *App) loadInitialData(mgr *store.Manager) error {
+	matches, err := filepath.Glob(a.cfg.InitialData)
+	if err != nil {
+		return fmt.Errorf("failed to glob initial data pattern: %w", err)
+	}
+	if len(matches) == 0 {
+		logger.Info("📋 No initial data files found matching %s", a.cfg.InitialData)
+		return nil
+	}
+
+	logger.Info("📦 Loading %d initial data file(s)...", len(matches))
+	for _, file := range matches {
+		sqlContent, err := os.ReadFile(file)
+		if err != nil {
+			return fmt.Errorf("failed to read initial data file %s: %w", file, err)
+		}
+		if err := mgr.GormDB().Exec(string(sqlContent)).Error; err != nil {
+			return fmt.Errorf("failed to execute initial data from %s: %w", file, err)
+		}
+		logger.Info("✅ Initial data loaded from %s", file)
+	}
 	return nil
 }

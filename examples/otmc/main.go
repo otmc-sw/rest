@@ -12,14 +12,12 @@ import (
 	"github.com/otmc-sw/rest/otmc"
 )
 
-//go:embed configs/banner.txt
-var APP_BANNER string
-
 func main() {
 	app := otmc.New(otmc.Config{
-		Name:   "My Application",
-		Port:   6000,
-		Banner: APP_BANNER,
+		Name:        "My Application",
+		Port:        6000,
+		Banner:      "configs/banner.txt",
+		InitialData: "db/*.sql",
 	})
 
 	app.Register(

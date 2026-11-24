@@ -104,6 +104,11 @@ func (m *Manager) Repository(t reflect.Type) *Repository {
 	return m.byModel[t]
 }
 
+// GormDB returns the underlying GORM database instance.
+func (m *Manager) GormDB() *gorm.DB {
+	return m.DB
+}
+
 // Close closes the underlying database connection.
 func (m *Manager) Close() error {
 	sqlDB, err := m.DB.DB()
