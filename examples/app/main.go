@@ -8,7 +8,7 @@ package main
 import (
 	_ "embed"
 
-	"github.com/otmc-sw/rest/examples/otmc/models"
+	"github.com/otmc-sw/rest/examples/app/models"
 	"github.com/otmc-sw/rest/otmc"
 )
 
