@@ -13,8 +13,8 @@ type Role struct {
 	Name        string     `json:"name" otmc:"required;unique"`
 	Description string     `json:"description"`
 	Status      string     `json:"status"`
-	CreatedAt   *time.Time `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt   *time.Time `json:"updated_at" gorm:"autoUpdateTime"`
+	CreatedAt   time.Time  `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt   time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
 }
 
 // User is automatically migrated to a "users" table and exposed at /api/users.
@@ -29,6 +29,6 @@ type User struct {
 	Status    string     `json:"status"`
 	RoleID    *uint64    `json:"role_id"`
 	Role      *Role      `json:"role,omitempty"`
-	CreatedAt *time.Time `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt *time.Time `json:"updated_at" gorm:"autoUpdateTime"`
+	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 }
