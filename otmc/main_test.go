@@ -74,7 +74,7 @@ func TestCRUDLifecycle(t *testing.T) {
 	}
 
 	// create role
-	resp, b = do(t, app, "POST", "/api/test_roles", `{"name":"admin","description":"Administrators"}`)
+	resp, b = do(t, app, "POST", "/api/test_role", `{"name":"admin","description":"Administrators"}`)
 	if resp.StatusCode != 201 {
 		t.Fatalf("create role: %d %s", resp.StatusCode, b)
 	}
@@ -83,31 +83,31 @@ func TestCRUDLifecycle(t *testing.T) {
 	}
 
 	// unique violation -> 409
-	resp, b = do(t, app, "POST", "/api/test_roles", `{"name":"admin"}`)
+	resp, b = do(t, app, "POST", "/api/test_role", `{"name":"admin"}`)
 	if resp.StatusCode != 409 {
 		t.Fatalf("unique role: %d %s", resp.StatusCode, b)
 	}
 
 	// missing required -> 422
-	resp, b = do(t, app, "POST", "/api/test_roles", `{"description":"no name"}`)
+	resp, b = do(t, app, "POST", "/api/test_role", `{"description":"no name"}`)
 	if resp.StatusCode != 422 {
 		t.Fatalf("required role: %d %s", resp.StatusCode, b)
 	}
 
 	// create user
-	resp, b = do(t, app, "POST", "/api/test_users", `{"name":"Alice","email":"a@x.com","role_id":1}`)
+	resp, b = do(t, app, "POST", "/api/test_user", `{"name":"Alice","email":"a@x.com","role_id":1}`)
 	if resp.StatusCode != 201 {
 		t.Fatalf("create user: %d %s", resp.StatusCode, b)
 	}
 
 	// duplicate email -> 409
-	resp, b = do(t, app, "POST", "/api/test_users", `{"name":"Bob","email":"a@x.com"}`)
+	resp, b = do(t, app, "POST", "/api/test_user", `{"name":"Bob","email":"a@x.com"}`)
 	if resp.StatusCode != 409 {
 		t.Fatalf("unique email: %d %s", resp.StatusCode, b)
 	}
 
 	// list
-	resp, b = do(t, app, "GET", "/api/test_users", "")
+	resp, b = do(t, app, "GET", "/api/test_user", "")
 	if resp.StatusCode != 200 || !strings.Contains(string(b), `"total":1`) {
 		t.Fatalf("list users: %d %s", resp.StatusCode, b)
 	}
@@ -116,55 +116,55 @@ func TestCRUDLifecycle(t *testing.T) {
 	}
 
 	// filter by field
-	resp, b = do(t, app, "GET", "/api/test_users?email=a@x.com", "")
+	resp, b = do(t, app, "GET", "/api/test_user?email=a@x.com", "")
 	if resp.StatusCode != 200 || !strings.Contains(string(b), `"total":1`) {
 		t.Fatalf("filter users: %d %s", resp.StatusCode, b)
 	}
-	resp, b = do(t, app, "GET", "/api/test_users?email=none@x.com", "")
+	resp, b = do(t, app, "GET", "/api/test_user?email=none@x.com", "")
 	if !strings.Contains(string(b), `"total":0`) {
 		t.Fatalf("filter miss: %s", b)
 	}
 
 	// search
-	resp, b = do(t, app, "GET", "/api/test_users/search?keyword=alice", "")
+	resp, b = do(t, app, "GET", "/api/test_user/search?keyword=alice", "")
 	if resp.StatusCode != 200 || !strings.Contains(string(b), `"total":1`) {
 		t.Fatalf("search users: %d %s", resp.StatusCode, b)
 	}
 
 	// get
-	resp, b = do(t, app, "GET", "/api/test_users/1", "")
+	resp, b = do(t, app, "GET", "/api/test_user/1", "")
 	if resp.StatusCode != 200 || !strings.Contains(string(b), `"Alice"`) {
 		t.Fatalf("get user: %d %s", resp.StatusCode, b)
 	}
 
 	// patch
-	resp, b = do(t, app, "PATCH", "/api/test_users/1", `{"name":"Alicia"}`)
+	resp, b = do(t, app, "PATCH", "/api/test_user/1", `{"name":"Alicia"}`)
 	if resp.StatusCode != 200 || !strings.Contains(string(b), `"Alicia"`) {
 		t.Fatalf("patch user: %d %s", resp.StatusCode, b)
 	}
 
 	// put (full update)
-	resp, b = do(t, app, "PUT", "/api/test_users/1", `{"name":"Alice","email":"a@x.com","role_id":1}`)
+	resp, b = do(t, app, "PUT", "/api/test_user/1", `{"name":"Alice","email":"a@x.com","role_id":1}`)
 	if resp.StatusCode != 200 {
 		t.Fatalf("put user: %d %s", resp.StatusCode, b)
 	}
 
 	// delete many
-	resp, b = do(t, app, "POST", "/api/test_users", `{"name":"Carol","email":"c@x.com"}`)
+	resp, b = do(t, app, "POST", "/api/test_user", `{"name":"Carol","email":"c@x.com"}`)
 	if resp.StatusCode != 201 {
 		t.Fatalf("create user2: %d %s", resp.StatusCode, b)
 	}
-	resp, b = do(t, app, "DELETE", "/api/test_users?ids=2", "")
+	resp, b = do(t, app, "DELETE", "/api/test_user?ids=2", "")
 	if resp.StatusCode != 200 || !strings.Contains(string(b), `"deleted":1`) {
 		t.Fatalf("delete many: %d %s", resp.StatusCode, b)
 	}
 
 	// delete
-	resp, b = do(t, app, "DELETE", "/api/test_users/1", "")
+	resp, b = do(t, app, "DELETE", "/api/test_user/1", "")
 	if resp.StatusCode != 200 {
 		t.Fatalf("delete user: %d %s", resp.StatusCode, b)
 	}
-	resp, b = do(t, app, "GET", "/api/test_users/1", "")
+	resp, b = do(t, app, "GET", "/api/test_user/1", "")
 	if resp.StatusCode != 404 {
 		t.Fatalf("get deleted: %d %s", resp.StatusCode, b)
 	}

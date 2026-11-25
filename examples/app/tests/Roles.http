@@ -5,7 +5,7 @@ GET {{baseUrl}}/../healthz
 
 ### Create a Role
 # @name CreateRole
-POST {{baseUrl}}/roles
+POST {{baseUrl}}/role
 Content-Type: application/json
 
 {
@@ -18,7 +18,7 @@ Content-Type: application/json
 
 ### Create a second Role (for list/filter tests)
 # @name CreateRole2
-POST {{baseUrl}}/roles
+POST {{baseUrl}}/role
 Content-Type: application/json
 
 {
@@ -28,21 +28,21 @@ Content-Type: application/json
 
 ### Get all Roles (paginated)
 # @name GetAllRoles
-GET {{baseUrl}}/roles
+GET {{baseUrl}}/role
 
 ### Search Roles by keyword
-GET {{baseUrl}}/roles?keyword=admin
+GET {{baseUrl}}/role?keyword=admin
 
 ### Filter Roles by name
-GET {{baseUrl}}/roles?name=admin_{{$timestamp}}
+GET {{baseUrl}}/role?name=admin_{{$timestamp}}
 
 ### Get a Role by ID
 # @name GetRole
-GET {{baseUrl}}/roles/{{createdId}}
+GET {{baseUrl}}/role/{{createdId}}
 
 ### Update a Role (PUT - full replace)
 # @name UpdateRole
-PUT {{baseUrl}}/roles/{{createdId}}
+PUT {{baseUrl}}/role/{{createdId}}
 Content-Type: application/json
 
 {
@@ -51,7 +51,7 @@ Content-Type: application/json
 }
 
 ### Patch a Role (PATCH - partial update)
-PATCH {{baseUrl}}/roles/{{createdId}}
+PATCH {{baseUrl}}/role/{{createdId}}
 Content-Type: application/json
 
 {
@@ -59,7 +59,7 @@ Content-Type: application/json
 }
 
 ### Create a Role with duplicate name (unique violation -> 409)
-POST {{baseUrl}}/roles
+POST {{baseUrl}}/role
 Content-Type: application/json
 
 {
@@ -68,7 +68,7 @@ Content-Type: application/json
 }
 
 ### Create a Role missing name (validation error -> 422)
-POST {{baseUrl}}/roles
+POST {{baseUrl}}/role
 Content-Type: application/json
 
 {
@@ -76,14 +76,14 @@ Content-Type: application/json
 }
 
 ### Get a Role that does not exist (404)
-GET {{baseUrl}}/roles/999999
+GET {{baseUrl}}/role/999999
 
 ### Delete a Role
 # @name DeleteRole
-DELETE {{baseUrl}}/roles/{{createdId}}
+DELETE {{baseUrl}}/role/{{createdId}}
 
 ### Verify Role is deleted (404)
-GET {{baseUrl}}/roles/{{createdId}}
+GET {{baseUrl}}/role/{{createdId}}
 
 ### Delete multiple Roles by ids
-DELETE {{baseUrl}}/roles?ids=1,2
+DELETE {{baseUrl}}/role?ids=1,2

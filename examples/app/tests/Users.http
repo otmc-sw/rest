@@ -1,0 +1,137 @@
+@baseUrl = http://localhost:6000/api
+
+### Health check
+GET {{baseUrl}}/../healthz
+
+### Create a User
+# @name CreateUser
+POST {{baseUrl}}/user
+Content-Type: application/json
+
+{
+  "username": "testuser_{{$timestamp}}",
+  "email": "testuser_{{$timestamp}}@example.com",
+  "password": "secret123",
+  "full_name": "Test User",
+  "status": "active"
+}
+
+### Get the created User ID
+@createdId = {{CreateUser.response.body.data.id}}
+
+### Create a second User (for list/filter tests)
+# @name CreateUser2
+POST {{baseUrl}}/user
+Content-Type: application/json
+
+{
+  "username": "testuser2_{{$timestamp}}",
+  "email": "testuser2_{{$timestamp}}@example.com",
+  "password": "secret123",
+  "full_name": "Second User",
+  "status": "active"
+}
+
+### Get all Users (paginated)
+# @name GetAllUsers
+GET {{baseUrl}}/user
+
+### Search Users by keyword
+GET {{baseUrl}}/user?keyword=testuser
+
+### Filter Users by username
+GET {{baseUrl}}/user?username=testuser_{{$timestamp}}
+
+### Filter Users by status
+GET {{baseUrl}}/user?status=active
+
+### Get a User by ID
+# @name GetUser
+GET {{baseUrl}}/user/{{createdId}}
+
+### Update a User (PUT - full replace)
+# @name UpdateUser
+PUT {{baseUrl}}/user/{{createdId}}
+Content-Type: application/json
+
+{
+  "username": "testuser_{{$timestamp}}",
+  "email": "testuser_{{$timestamp}}@example.com",
+  "full_name": "Updated Test User",
+  "status": "active"
+}
+
+### Patch a User (PATCH - partial update)
+PATCH {{baseUrl}}/user/{{createdId}}
+Content-Type: application/json
+
+{
+  "full_name": "Patched User Name"
+}
+
+### Create a User with duplicate username (unique violation -> 409)
+POST {{baseUrl}}/user
+Content-Type: application/json
+
+{
+  "username": "testuser_{{$timestamp}}",
+  "email": "another_{{$timestamp}}@example.com",
+  "full_name": "Duplicate Username"
+}
+
+### Create a User missing username (validation error -> 422)
+POST {{baseUrl}}/user
+Content-Type: application/json
+
+{
+  "email": "missing_{{$timestamp}}@example.com",
+  "full_name": "Missing Username"
+}
+
+### Get a User that does not exist (404)
+GET {{baseUrl}}/user/999999
+
+### Login with seeded admin user
+# @name Login
+POST {{baseUrl}}/user/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "anything"
+}
+
+### Login with invalid credentials (401)
+POST {{baseUrl}}/user/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "wrong"
+}
+
+### Login with non-existent user (401)
+POST {{baseUrl}}/user/login
+Content-Type: application/json
+
+{
+  "username": "ghost_{{$timestamp}}",
+  "password": "whatever"
+}
+
+### Logout
+POST {{baseUrl}}/user/logout
+
+
+### Verify avatar_url was updated
+GET {{baseUrl}}/user/{{createdId}}
+
+### Delete a User
+# @name DeleteUser
+DELETE {{baseUrl}}/user/{{createdId}}
+
+### Verify User is deleted (404)
+GET {{baseUrl}}/user/{{createdId}}
+
+### Delete multiple Users by ids
+DELETE {{baseUrl}}/user?ids=1,2
