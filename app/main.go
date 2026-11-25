@@ -19,10 +19,12 @@ package app
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"time"
 
@@ -58,6 +60,13 @@ type Config struct {
 	// skipped silently when no dist folder exists.
 	Production bool
 	StaticDir  string
+
+	// InitialDirs are created (MkdirAll) at startup, before the database
+	// connects, e.g. data/, logs/ directories.
+	InitialDirs []string
+	// FileLog writes logs to the given file path; parent directories are
+	// created automatically. Empty keeps console-only logging.
+	FileLog string
 }
 
 // DatabaseConfig describes the database connection.
@@ -74,6 +83,36 @@ type App struct {
 	store    *store.Manager
 	schema   []*schema.Model
 	handlers []HandlerFunc
+}
+
+// Standard CLI flags parsed by Runner: -P production mode, -d debug, -p port.
+// They override the matching Config fields only when explicitly passed.
+var (
+	cliProd  bool
+	cliDebug bool
+	cliPort  int
+	cliOnce  sync.Once
+)
+
+// parseCLI registers and parses the standard flags once, then applies the
+// ones that were explicitly set onto this app's config.
+func (a *App) parseCLI() {
+	cliOnce.Do(func() {
+		flag.BoolVar(&cliProd, "P", a.cfg.Production, "Run in production mode")
+		flag.BoolVar(&cliDebug, "d", a.cfg.Debug, "Enable debug mode")
+		flag.IntVar(&cliPort, "p", a.cfg.Port, "Port")
+		flag.Parse()
+	})
+	flag.Visit(func(f *flag.Flag) {
+		switch f.Name {
+		case "P":
+			a.cfg.Production = cliProd
+		case "d":
+			a.cfg.Debug = cliDebug
+		case "p":
+			a.cfg.Port = cliPort
+		}
+	})
 }
 
 // New creates an application with the given configuration.
@@ -114,6 +153,10 @@ func (a *App) Store() *store.Manager { return a.store }
 // Run builds the schema, migrates the database, registers all routes and
 // serves until SIGINT/SIGTERM. It blocks.
 func (a *App) Runner() error {
+	a.parseCLI()
+	if err := a.prepare(); err != nil {
+		return err
+	}
 	if a.cfg.Banner != "" {
 		if bannerContent, err := os.ReadFile(a.cfg.Banner); err == nil {
 			fmt.Println(string(bannerContent))
@@ -147,6 +190,30 @@ func (a *App) Runner() error {
 	defer cancel()
 	logger.Info("⏳ Shutting down server...")
 	return a.fiber.ShutdownWithContext(ctx)
+}
+
+// prepare creates InitialDirs and configures file logging before anything else
+// runs, so startup logs are captured too.
+func (a *App) prepare() error {
+	for _, dir := range a.cfg.InitialDirs {
+		if dir == "" {
+			continue
+		}
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return fmt.Errorf("otmc: create initial dir %q: %w", dir, err)
+		}
+		logger.Info("✅ Directory ready: %s", dir)
+	}
+	if a.cfg.FileLog != "" {
+		if dir := filepath.Dir(a.cfg.FileLog); dir != "" && dir != "." {
+			if err := os.MkdirAll(dir, 0o755); err != nil {
+				return fmt.Errorf("otmc: create log dir %q: %w", dir, err)
+			}
+		}
+		logger.Configure(logger.WithFile(a.cfg.FileLog))
+		logger.Info("📝 Logging to file: %s", a.cfg.FileLog)
+	}
+	return nil
 }
 
 // build performs schema parsing, DB migration and route registration.
