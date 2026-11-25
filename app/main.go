@@ -267,7 +267,8 @@ func (a *App) Initializer() error {
 
 	logger.Info("🧩 Initializing web server...")
 	a.fiber = fiber.New(fiber.Config{
-		AppName: a.cfg.Name,
+		AppName:     a.cfg.Name,
+		IdleTimeout: 30 * time.Second,
 	})
 	a.fiber.Use(recover.New())
 	a.fiber.Use(func(c *fiber.Ctx) error {
