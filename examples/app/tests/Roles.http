@@ -1,0 +1,89 @@
+@baseUrl = http://localhost:6000/api
+
+### Health check
+GET {{baseUrl}}/../healthz
+
+### Create a Role
+# @name CreateRole
+POST {{baseUrl}}/roles
+Content-Type: application/json
+
+{
+  "name": "admin_{{$timestamp}}",
+  "description": "Administrator role"
+}
+
+### Get the created Role ID
+@createdId = {{CreateRole.response.body.data.id}}
+
+### Create a second Role (for list/filter tests)
+# @name CreateRole2
+POST {{baseUrl}}/roles
+Content-Type: application/json
+
+{
+  "name": "user_{{$timestamp}}",
+  "description": "Standard user role"
+}
+
+### Get all Roles (paginated)
+# @name GetAllRoles
+GET {{baseUrl}}/roles
+
+### Search Roles by keyword
+GET {{baseUrl}}/roles?keyword=admin
+
+### Filter Roles by name
+GET {{baseUrl}}/roles?name=admin_{{$timestamp}}
+
+### Get a Role by ID
+# @name GetRole
+GET {{baseUrl}}/roles/{{createdId}}
+
+### Update a Role (PUT - full replace)
+# @name UpdateRole
+PUT {{baseUrl}}/roles/{{createdId}}
+Content-Type: application/json
+
+{
+  "name": "admin_updated_{{$timestamp}}",
+  "description": "Updated administrator role"
+}
+
+### Patch a Role (PATCH - partial update)
+PATCH {{baseUrl}}/roles/{{createdId}}
+Content-Type: application/json
+
+{
+  "description": "Patched description"
+}
+
+### Create a Role with duplicate name (unique violation -> 409)
+POST {{baseUrl}}/roles
+Content-Type: application/json
+
+{
+  "name": "admin_updated_{{$timestamp}}",
+  "description": "Duplicate name"
+}
+
+### Create a Role missing name (validation error -> 422)
+POST {{baseUrl}}/roles
+Content-Type: application/json
+
+{
+  "description": "Missing required name"
+}
+
+### Get a Role that does not exist (404)
+GET {{baseUrl}}/roles/999999
+
+### Delete a Role
+# @name DeleteRole
+DELETE {{baseUrl}}/roles/{{createdId}}
+
+### Verify Role is deleted (404)
+GET {{baseUrl}}/roles/{{createdId}}
+
+### Delete multiple Roles by ids
+DELETE {{baseUrl}}/roles?ids=1,2
