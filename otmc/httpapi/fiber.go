@@ -42,6 +42,27 @@ func RegisterRoutes(app *fiber.App, prefix string, repos []*store.Repository) {
 	}
 }
 
+// GetRepository returns a repository by model name from the store manager.
+// This is useful for custom handlers that need access to the repository.
+func GetRepository(store *store.Manager, modelName string) *store.Repository {
+	for _, repo := range store.Repositories() {
+		if repo.Model().Name == modelName {
+			return repo
+		}
+	}
+	return nil
+}
+
+// GetRepositoryByTable returns a repository by table name from the store manager.
+func GetRepositoryByTable(store *store.Manager, tableName string) *store.Repository {
+	for _, repo := range store.Repositories() {
+		if repo.Model().Table == tableName {
+			return repo
+		}
+	}
+	return nil
+}
+
 func mountResource(app *fiber.App, prefix string, repo *store.Repository) {
 	m := repo.Model()
 	base := prefix + "/" + m.Route

@@ -8,6 +8,7 @@ package main
 import (
 	_ "embed"
 
+	"github.com/otmc-sw/rest/examples/app/handlers"
 	"github.com/otmc-sw/rest/examples/app/models"
 	"github.com/otmc-sw/rest/otmc"
 )
@@ -24,6 +25,9 @@ func main() {
 		&models.Role{},
 		&models.User{},
 	)
+
+	// Register custom handlers
+	app.RegisterHandlers(handlers.RegisterUserHandlers)
 
 	app.Runner()
 }

@@ -7,7 +7,7 @@ package models
 
 import "time"
 
-// Role is automatically migrated to a "roles" table and exposed at /api/roles.
+// Role is automatically migrated to a "role" table and exposed at /api/role.
 type Role struct {
 	ID          uint64     `json:"id" otmc:"primary;auto"`
 	Name        string     `json:"name" otmc:"required;unique"`
@@ -17,7 +17,7 @@ type Role struct {
 	UpdatedAt   time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
 }
 
-// User is automatically migrated to a "users" table and exposed at /api/users.
+// User is automatically migrated to a "user" table and exposed at /api/user.
 // RoleID + Role give GORM a belongs-to relation to Role.
 type User struct {
 	ID        uint64     `json:"id" otmc:"primary;auto"`

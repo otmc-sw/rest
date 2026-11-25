@@ -11,6 +11,10 @@
 //	app := otmc.New(otmc.Config{Name: "My App", Port: 5007, Database: ...})
 //	app.Register(&models.Role{}, &models.User{})
 //	app.Run()
+//
+// Models are exposed at routes matching their struct names in snake_case:
+// - Role struct -> /api/role
+// - User struct -> /api/user
 package otmc
 
 import (
@@ -32,6 +36,10 @@ import (
 	"github.com/otmc-sw/rest/otmc/store"
 )
 
+// HandlerFunc is a function that registers custom routes on the Fiber app.
+// It receives the Fiber app instance, the API prefix, and the store manager.
+type HandlerFunc func(app *fiber.App, prefix string, store *store.Manager)
+
 // Config configures the application.
 type Config struct {
 	Name        string
@@ -52,11 +60,12 @@ type DatabaseConfig struct {
 
 // App is a running OTMC application.
 type App struct {
-	cfg    Config
-	models []any
-	fiber  *fiber.App
-	store  *store.Manager
-	schema []*schema.Model
+	cfg       Config
+	models    []any
+	fiber     *fiber.App
+	store     *store.Manager
+	schema    []*schema.Model
+	handlers  []HandlerFunc
 }
 
 // New creates an application with the given configuration.
@@ -77,6 +86,13 @@ func New(cfg Config) *App {
 // REST endpoints will be generated automatically.
 func (a *App) Register(models ...any) *App {
 	a.models = append(a.models, models...)
+	return a
+}
+
+// RegisterHandlers adds custom handler functions that can register additional
+// routes on the Fiber app. Handlers are called after auto-generated CRUD routes.
+func (a *App) RegisterHandlers(handlers ...HandlerFunc) *App {
+	a.handlers = append(a.handlers, handlers...)
 	return a
 }
 
@@ -197,6 +213,16 @@ func (a *App) Initializer() error {
 	logger.Info("🌐 Registering API routes under %s...", a.cfg.APIPrefix)
 	httpapi.RegisterRoutes(a.fiber, a.cfg.APIPrefix, mgr.Repositories())
 	logger.Info("✅ API routes registered.")
+
+	// Register custom handlers if any
+	if len(a.handlers) > 0 {
+		logger.Info("🔧 Registering %d custom handler(s)...", len(a.handlers))
+		for _, handler := range a.handlers {
+			handler(a.fiber, a.cfg.APIPrefix, mgr)
+		}
+		logger.Info("✅ Custom handlers registered.")
+	}
+
 	return nil
 }
 

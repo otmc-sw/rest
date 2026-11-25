@@ -20,7 +20,7 @@ go get github.com/otmc-sw/rest@latest
 ```go
 package models
 
-// Role is automatically migrated to a "roles" table and exposed at /api/roles.
+// Role is automatically migrated to a "role" table and exposed at /api/role.
 type Role struct {
 	ID          uint64     `json:"id" otmc:"primary;auto"`
 	Name        string     `json:"name" otmc:"required;unique"`
@@ -34,7 +34,7 @@ type Role struct {
 ```go
 package models
 
-// User is automatically migrated to a "users" table and exposed at /api/users.
+// User is automatically migrated to a "user" table and exposed at /api/user.
 // RoleID + Role give GORM a belongs-to relation to Role.
 type User struct {
 	ID        uint64     `json:"id" otmc:"primary;auto"`
@@ -115,11 +115,11 @@ db/roles.sql
 -- Initial data for roles
 
 -- Clear existing data first
-DELETE FROM roles;
+DELETE FROM role;
 
 
 -- Insert initial roles
-INSERT OR IGNORE INTO roles (id, name, description, status, created_at, updated_at) VALUES
+INSERT OR IGNORE INTO role (id, name, description, status, created_at, updated_at) VALUES
 (1, 'admin', 'Administrator with full access', 'active', datetime('now'), datetime('now')),
 (2, 'user', 'Regular user with limited access', 'active', datetime('now'), datetime('now')),
 (3, 'guest', 'Guest user with read-only access', 'active', datetime('now'), datetime('now'));
@@ -131,10 +131,10 @@ db/users.sql
 -- Initial data for users
 
 -- Clear existing data first
-DELETE FROM users;
+DELETE FROM user;
 
 -- Insert initial users
-INSERT OR IGNORE INTO users (id, username, email, password, role_id, status, created_at, updated_at) VALUES
+INSERT OR IGNORE INTO user (id, username, email, password, role_id, status, created_at, updated_at) VALUES
 (1, 'admin', 'admin@example.com', 'hashed_password', 1, 'active', datetime('now'), datetime('now')),
 (2, 'user', 'user@example.com', 'hashed_password', 2, 'active', datetime('now'), datetime('now')),
 (3, 'guest', 'guest@example.com', 'hashed_password', 3, 'active', datetime('now'), datetime('now'));
@@ -142,14 +142,14 @@ INSERT OR IGNORE INTO users (id, username, email, password, role_id, status, cre
 
 ### Note: Auto-generated endpoints
 
-For every registered model `X` with route `xs`, OTMC generates:
+For every registered model `X` with route `x` (singular snake_case), OTMC generates:
 
 | Method   | Path              | Description                     |
 |----------|-------------------|---------------------------------|
-| `GET`    | `/api/xs`         | List (paginated, filter, sort)  |
+| `GET`    | `/api/x`         | List (paginated, filter, sort)  |
 | `GET`    | `/api/xs/search`  | Same as list (search alias)     |
 | `GET`    | `/api/xs/:id`     | Get one record                  |
-| `POST`   | `/api/xs`         | Create a record                 |
+| `POST`   | `/api/x`         | Create a record                 |
 | `PUT`    | `/api/xs/:id`     | Full update (replace)           |
 | `PATCH`  | `/api/xs/:id`     | Partial update                  |
 | `DELETE` | `/api/xs/:id`     | Delete one record               |

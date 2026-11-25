@@ -66,8 +66,8 @@ func Parse(model any) (*Model, error) {
 	m := &Model{
 		GoType:  t,
 		Name:    t.Name(),
-		Table:   Plural(Snake(t.Name())),
-		Route:   Plural(Snake(t.Name())),
+		Table:   Snake(t.Name()),
+		Route:   Snake(t.Name()),
 		ByJSON:  map[string]*Field{},
 		ByDB:    map[string]*Field{},
 	}
