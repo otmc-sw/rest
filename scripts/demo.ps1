@@ -1,5 +1,5 @@
 param(
-    [string]$t = "otmc"
+    [string]$t = "app"
 )
 
 $CURRENT_DIR = Get-Location

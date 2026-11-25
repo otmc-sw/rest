@@ -15,6 +15,7 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	gormschema "gorm.io/gorm/schema"
 
 	"github.com/glebarez/sqlite"
 
@@ -32,6 +33,22 @@ type Manager struct {
 	DB      *gorm.DB
 	repos   []*Repository
 	byModel map[reflect.Type]*Repository
+	namer   *otmcNamer
+}
+
+// otmcNamer maps registered model type names to their OTMC table names so that
+// AutoMigrate creates tables matching schema.Model.Table (e.g. "user", not
+// GORM's default plural "users"). Unknown names fall back to GORM defaults.
+type otmcNamer struct {
+	gormschema.NamingStrategy
+	tables map[string]string // Go type name -> table name
+}
+
+func (n *otmcNamer) TableName(str string) string {
+	if t, ok := n.tables[str]; ok {
+		return t
+	}
+	return n.NamingStrategy.TableName(str)
 }
 
 // Open creates a GORM connection for the given driver.
@@ -54,11 +71,15 @@ func Open(cfg Config) (*Manager, error) {
 	default:
 		return nil, fmt.Errorf("otmc: unsupported database driver %q", cfg.Driver)
 	}
-	db, err := gorm.Open(dialector, &gorm.Config{})
+	namer := &otmcNamer{
+		NamingStrategy: gormschema.NamingStrategy{IdentifierMaxLength: 64},
+		tables:         map[string]string{},
+	}
+	db, err := gorm.Open(dialector, &gorm.Config{NamingStrategy: namer})
 	if err != nil {
 		return nil, fmt.Errorf("otmc: open database: %w", err)
 	}
-	return &Manager{DB: db, byModel: map[reflect.Type]*Repository{}}, nil
+	return &Manager{DB: db, byModel: map[reflect.Type]*Repository{}, namer: namer}, nil
 }
 
 // ensureSQLiteDir creates the parent directory for file-based sqlite DSNs.
@@ -85,6 +106,7 @@ func ensureSQLiteDir(dsn string) error {
 func (m *Manager) Register(models ...*schema.Model) error {
 	for _, model := range models {
 		repo := NewRepository(m.DB, model)
+		m.namer.tables[model.Name] = model.Table
 		if err := m.DB.AutoMigrate(reflect.New(model.GoType).Interface()); err != nil {
 			return fmt.Errorf("otmc: automigrate %s: %w", model.Name, err)
 		}

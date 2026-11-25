@@ -26,8 +26,6 @@ func main() {
 		&models.User{},
 	)
 
-	// Register custom handlers
 	app.RegisterHandlers(handlers.RegisterUserHandlers)
-
 	app.Runner()
 }
