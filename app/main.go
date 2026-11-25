@@ -50,6 +50,14 @@ type Config struct {
 	InitialData string // optional initial data SQL files pattern (e.g., "db/*.sql")
 
 	Database DatabaseConfig
+
+	// Production selects the built-frontend location: ./frontend/dist inside the
+	// working directory (prod layout) vs ../frontend/dist (dev monorepo layout).
+	// StaticDir overrides the location explicitly; when set (or Production is
+	// true) a missing directory logs a warning, otherwise static serving is
+	// skipped silently when no dist folder exists.
+	Production bool
+	StaticDir  string
 }
 
 // DatabaseConfig describes the database connection.
@@ -224,6 +232,9 @@ func (a *App) Initializer() error {
 		}
 		logger.Info("✅ Custom handlers registered.")
 	}
+
+	// Serve the built frontend last so API and custom routes always win.
+	a.registerStatic()
 
 	return nil
 }
