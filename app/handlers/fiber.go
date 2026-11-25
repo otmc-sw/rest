@@ -3,7 +3,7 @@
  * @Copyright (c) 2026 OTMC Softwares. OTMC Golang REST.
  * @Contributors Nguyen Van Trung, Nguyen Thi Hoai, OTMC Contributors.
 **/
-package httpapi
+package handlers
 
 import (
 	"bytes"
@@ -18,10 +18,10 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 
+	"github.com/otmc-sw/rest/app/schema"
+	"github.com/otmc-sw/rest/app/store"
 	restcontext "github.com/otmc-sw/rest/context"
 	resterrors "github.com/otmc-sw/rest/errors"
-	"github.com/otmc-sw/rest/otmc/schema"
-	"github.com/otmc-sw/rest/otmc/store"
 	"github.com/otmc-sw/rest/pagination"
 	"github.com/otmc-sw/rest/response"
 )

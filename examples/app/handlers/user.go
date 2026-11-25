@@ -12,16 +12,16 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
+	"github.com/otmc-sw/rest/app"
+	"github.com/otmc-sw/rest/app/handlers"
+	"github.com/otmc-sw/rest/app/store"
 	"github.com/otmc-sw/rest/errors"
-	"github.com/otmc-sw/rest/otmc"
-	"github.com/otmc-sw/rest/otmc/httpapi"
-	"github.com/otmc-sw/rest/otmc/store"
 	"github.com/otmc-sw/rest/response"
 )
 
 // RegisterUserHandlers registers custom user-related handlers.
 func RegisterUserHandlers(app *fiber.App, prefix string, mgr *store.Manager) {
-	userRepo := httpapi.GetRepository(mgr, "User")
+	userRepo := handlers.GetRepository(mgr, "User")
 	if userRepo == nil {
 		return
 	}
@@ -37,7 +37,7 @@ func RegisterUserHandlers(app *fiber.App, prefix string, mgr *store.Manager) {
 // Login handles user authentication.
 func Login(repo *store.Repository) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		ctx := httpapi.FiberContext{Ctx: c}
+		ctx := handlers.FiberContext{Ctx: c}
 
 		// Parse request body
 		var req struct {
@@ -81,14 +81,14 @@ func Login(repo *store.Repository) fiber.Handler {
 
 // Logout handles user logout.
 func Logout(c *fiber.Ctx) error {
-	ctx := httpapi.FiberContext{Ctx: c}
+	ctx := handlers.FiberContext{Ctx: c}
 	return response.OK[string](ctx).Message("logout successful").Send()
 }
 
 // UploadAvatar handles avatar upload for a user.
 func UploadAvatar(repo *store.Repository) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		ctx := httpapi.FiberContext{Ctx: c}
+		ctx := handlers.FiberContext{Ctx: c}
 
 		// Parse user ID
 		id, err := repo.ParseID(c.Params("id"))
@@ -140,5 +140,5 @@ func getUserID(user any) any {
 }
 
 // HandlerFunc is the type signature for custom handlers.
-// This matches otmc.HandlerFunc for easy registration.
-type HandlerFunc = otmc.HandlerFunc
+// This matches app.HandlerFunc for easy registration.
+type HandlerFunc = app.HandlerFunc

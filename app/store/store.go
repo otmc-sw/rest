@@ -19,7 +19,7 @@ import (
 
 	"github.com/glebarez/sqlite"
 
-	"github.com/otmc-sw/rest/otmc/schema"
+	"github.com/otmc-sw/rest/app/schema"
 )
 
 // Config describes how to connect to the database.

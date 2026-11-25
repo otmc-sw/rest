@@ -15,7 +15,7 @@
 // Models are exposed at routes matching their struct names in snake_case:
 // - Role struct -> /api/role
 // - User struct -> /api/user
-package otmc
+package app
 
 import (
 	"context"
@@ -31,9 +31,9 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/otmc-sw/logger"
 
-	"github.com/otmc-sw/rest/otmc/httpapi"
-	"github.com/otmc-sw/rest/otmc/schema"
-	"github.com/otmc-sw/rest/otmc/store"
+	"github.com/otmc-sw/rest/app/handlers"
+	"github.com/otmc-sw/rest/app/schema"
+	"github.com/otmc-sw/rest/app/store"
 )
 
 // HandlerFunc is a function that registers custom routes on the Fiber app.
@@ -60,12 +60,12 @@ type DatabaseConfig struct {
 
 // App is a running OTMC application.
 type App struct {
-	cfg       Config
-	models    []any
-	fiber     *fiber.App
-	store     *store.Manager
-	schema    []*schema.Model
-	handlers  []HandlerFunc
+	cfg      Config
+	models   []any
+	fiber    *fiber.App
+	store    *store.Manager
+	schema   []*schema.Model
+	handlers []HandlerFunc
 }
 
 // New creates an application with the given configuration.
@@ -190,7 +190,7 @@ func (a *App) Initializer() error {
 
 	logger.Info("🧩 Initializing web server...")
 	a.fiber = fiber.New(fiber.Config{
-		AppName:               a.cfg.Name,
+		AppName: a.cfg.Name,
 	})
 	a.fiber.Use(recover.New())
 	a.fiber.Use(func(c *fiber.Ctx) error {
@@ -211,7 +211,7 @@ func (a *App) Initializer() error {
 	})
 
 	logger.Info("🌐 Registering API routes under %s...", a.cfg.APIPrefix)
-	httpapi.RegisterRoutes(a.fiber, a.cfg.APIPrefix, mgr.Repositories())
+	handlers.RegisterRoutes(a.fiber, a.cfg.APIPrefix, mgr.Repositories())
 	logger.Info("✅ API routes registered.")
 
 	// Register custom handlers if any

@@ -8,24 +8,24 @@ package main
 import (
 	_ "embed"
 
+	"github.com/otmc-sw/rest/app"
 	"github.com/otmc-sw/rest/examples/app/handlers"
 	"github.com/otmc-sw/rest/examples/app/models"
-	"github.com/otmc-sw/rest/otmc"
 )
 
 func main() {
-	app := otmc.New(otmc.Config{
+	myapp := app.New(app.Config{
 		Name:        "My Application",
 		Port:        6000,
 		Banner:      "configs/banner.txt",
 		InitialData: "db/*.sql",
 	})
 
-	app.Register(
+	myapp.Register(
 		&models.Role{},
 		&models.User{},
 	)
 
-	app.RegisterHandlers(handlers.RegisterUserHandlers)
-	app.Runner()
+	myapp.RegisterHandlers(handlers.RegisterUserHandlers)
+	myapp.Runner()
 }

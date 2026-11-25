@@ -16,7 +16,7 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/otmc-sw/rest/otmc/schema"
+	"github.com/otmc-sw/rest/app/schema"
 )
 
 // Query carries list/search options parsed from HTTP query params.
@@ -25,7 +25,7 @@ type Query struct {
 	Size    int
 	Keyword string
 	Sort    string
-	Order   string // "asc" | "desc"
+	Order   string            // "asc" | "desc"
 	Filters map[string]string // field json/db name -> raw value
 }
 
