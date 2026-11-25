@@ -33,6 +33,7 @@ type Field struct {
 	Hidden   bool // never exposed in API responses
 	ReadOnly bool // accepted on read but ignored on create/update input
 	Size     int  // max length for string-like columns, 0 = default
+	Hash     string // write transform, e.g. "bcrypt"; plaintext is hashed before save
 }
 
 // Relation describes an association to another registered model.
@@ -153,6 +154,13 @@ func parseFields(t reflect.Type, m *Model, prefix string) {
 		f.ReadOnly = has(directives, "readonly") || has(directives, "read_only")
 		if s, ok := directives["size"]; ok {
 			f.Size = atoi(s)
+		}
+		if v, ok := directives["hash"]; ok {
+			// Bare `hash` defaults to bcrypt; `hash=<algo>` selects the algorithm.
+			f.Hash = v
+			if f.Hash == "true" || f.Hash == "" {
+				f.Hash = "bcrypt"
+			}
 		}
 		if f.Primary {
 			m.Primary = f

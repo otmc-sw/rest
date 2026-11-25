@@ -173,12 +173,14 @@ func (a *App) Initializer() error {
 	logger.Info("✅ Database connection established.")
 	a.store = mgr
 
-	for _, model := range a.schema {
-		logger.Info("📚  Migrating table %s...", model.Table)
-		if err := mgr.Register(model); err != nil {
+	if len(a.schema) > 0 {
+		logger.Info("📚  Migrating %d table(s)...", len(a.schema))
+		if err := mgr.Register(a.schema...); err != nil {
 			return err
 		}
-		logger.Info("✅ Table %s ready.", model.Table)
+		for _, model := range a.schema {
+			logger.Info("✅ Table %s ready.", model.Table)
+		}
 	}
 
 	// Load initial data if configured

@@ -122,6 +122,9 @@ func (r *Repository) Create(ctx context.Context, body []byte) (any, error) {
 	if err := json.Unmarshal(body, inst); err != nil {
 		return nil, fmt.Errorf("invalid request body: %w", err)
 	}
+	if err := r.applyTransforms(inst); err != nil {
+		return nil, err
+	}
 	if err := r.validate(inst); err != nil {
 		return nil, err
 	}
@@ -144,6 +147,9 @@ func (r *Repository) Update(ctx context.Context, id any, body []byte) (any, erro
 		return nil, fmt.Errorf("invalid request body: %w", err)
 	}
 	r.setPrimary(existing, id)
+	if err := r.applyTransforms(existing); err != nil {
+		return nil, err
+	}
 	if err := r.validate(existing); err != nil {
 		return nil, err
 	}
@@ -196,6 +202,9 @@ func (r *Repository) Patch(ctx context.Context, id any, body []byte) (any, error
 		}
 	}
 	r.setPrimary(existing, id)
+	if err := r.applyTransforms(existing); err != nil {
+		return nil, err
+	}
 	if err := r.validate(existing); err != nil {
 		return nil, err
 	}

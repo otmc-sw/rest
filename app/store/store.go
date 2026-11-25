@@ -103,15 +103,21 @@ func ensureSQLiteDir(dsn string) error {
 }
 
 // Register parses schema metadata, runs AutoMigrate and creates repositories.
+// Table names are declared for ALL models before any AutoMigrate runs, so that
+// schemas pulled in early via relationships resolve to the correct table.
 func (m *Manager) Register(models ...*schema.Model) error {
+	// Phase 1: declare all table names and create repositories.
 	for _, model := range models {
 		repo := NewRepository(m.DB, model)
 		m.namer.tables[model.Name] = model.Table
+		m.repos = append(m.repos, repo)
+		m.byModel[model.GoType] = repo
+	}
+	// Phase 2: migrate.
+	for _, model := range models {
 		if err := m.DB.AutoMigrate(reflect.New(model.GoType).Interface()); err != nil {
 			return fmt.Errorf("otmc: automigrate %s: %w", model.Name, err)
 		}
-		m.repos = append(m.repos, repo)
-		m.byModel[model.GoType] = repo
 	}
 	return nil
 }

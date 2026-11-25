@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type testRole struct {
@@ -167,5 +169,83 @@ func TestCRUDLifecycle(t *testing.T) {
 	resp, b = do(t, app, "GET", "/api/test_user/1", "")
 	if resp.StatusCode != 404 {
 		t.Fatalf("get deleted: %d %s", resp.StatusCode, b)
+	}
+}
+
+type testAccount struct {
+	ID       uint64 `json:"id" otmc:"primary;auto"`
+	Username string `json:"username" otmc:"required;unique"`
+	Password string `json:"password,omitempty" otmc:"hidden;hash=bcrypt"`
+}
+
+func storedPassword(t *testing.T, app *App, id uint64) string {
+	t.Helper()
+	var row struct {
+		Password string
+	}
+	if err := app.Store().GormDB().Table("test_account").
+		Where("id = ?", id).Take(&row).Error; err != nil {
+		t.Fatalf("read stored password: %v", err)
+	}
+	return row.Password
+}
+
+func TestPasswordHashing(t *testing.T) {
+	dsn := filepath.Join(t.TempDir(), "hash.db")
+	app := New(Config{
+		Name:     "Hash App",
+		Database: DatabaseConfig{Driver: "sqlite", DSN: dsn},
+	})
+	app.Register(&testAccount{})
+	if err := app.Initializer(); err != nil {
+		t.Fatalf("Initializer: %v", err)
+	}
+	t.Cleanup(func() { app.Store().Close() })
+
+	// create -> plaintext is bcrypt-hashed before insert
+	resp, b := do(t, app, "POST", "/api/test_account", `{"username":"u1","password":"secret"}`)
+	if resp.StatusCode != 201 {
+		t.Fatalf("create account: %d %s", resp.StatusCode, b)
+	}
+	hash := storedPassword(t, app, 1)
+	if !strings.HasPrefix(hash, "$2") {
+		t.Fatalf("password not hashed: %q", hash)
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(hash), []byte("secret")); err != nil {
+		t.Fatalf("hash does not match plaintext: %v", err)
+	}
+	if strings.Contains(string(b), "secret") || strings.Contains(string(b), "$2") {
+		t.Fatalf("password leaked in response: %s", b)
+	}
+
+	// patch without password -> stored hash untouched
+	resp, b = do(t, app, "PATCH", "/api/test_account/1", `{"username":"u2"}`)
+	if resp.StatusCode != 200 {
+		t.Fatalf("patch username: %d %s", resp.StatusCode, b)
+	}
+	if got := storedPassword(t, app, 1); got != hash {
+		t.Fatalf("password changed on unrelated patch: %q -> %q", hash, got)
+	}
+
+	// patch with new plaintext -> re-hashed, old hash no longer matches
+	resp, b = do(t, app, "PATCH", "/api/test_account/1", `{"password":"newsecret"}`)
+	if resp.StatusCode != 200 {
+		t.Fatalf("patch password: %d %s", resp.StatusCode, b)
+	}
+	newHash := storedPassword(t, app, 1)
+	if newHash == hash {
+		t.Fatal("password was not re-hashed")
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(newHash), []byte("newsecret")); err != nil {
+		t.Fatalf("new hash does not match: %v", err)
+	}
+
+	// resending the stored hash is not double-hashed
+	resp, b = do(t, app, "PATCH", "/api/test_account/1", `{"password":"`+newHash+`"}`)
+	if resp.StatusCode != 200 {
+		t.Fatalf("patch hash: %d %s", resp.StatusCode, b)
+	}
+	if got := storedPassword(t, app, 1); got != newHash {
+		t.Fatal("stored hash was re-hashed")
 	}
 }
