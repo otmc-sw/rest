@@ -13,12 +13,21 @@ import (
 	"github.com/otmc-sw/rest/examples/app/models"
 )
 
+var (
+	INIT_DIRS = []string{
+		"data/avatars",
+		"data/attachments",
+		"data/logs",
+	}
+)
+
 func main() {
 	myapp := app.New(app.Config{
 		Name:        "My Application",
 		Port:        6000,
 		Banner:      "configs/banner.txt",
 		InitialData: "db/*.sql",
+		InitialDirs: INIT_DIRS,
 	})
 
 	myapp.Register(

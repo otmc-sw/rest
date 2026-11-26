@@ -302,7 +302,7 @@ func (a *App) Initializer() error {
 	}
 
 	// Serve the built frontend last so API and custom routes always win.
-	a.registerStatic()
+	handlers.StaticRegister(a.fiber, a.cfg.StaticDir, a.cfg.Production)
 
 	return nil
 }
