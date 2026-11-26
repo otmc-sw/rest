@@ -205,7 +205,7 @@ func (a *App) Prepare() error {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return fmt.Errorf("otmc: create initial dir %q: %w", dir, err)
 		}
-		logger.Info("✅ Directory ready: %s", dir)
+		logger.Info("📂 Directory ready: %s", dir)
 	}
 	if a.cfg.FileLog != "" {
 		if dir := filepath.Dir(a.cfg.FileLog); dir != "" && dir != "." {
