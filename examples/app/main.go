@@ -26,6 +26,7 @@ func main() {
 		Name:        "My Application",
 		Port:        6000,
 		Banner:      "configs/banner.txt",
+		FileLog:     "data/logs/app.log",
 		InitialData: "db/*.sql",
 		InitialDirs: INIT_DIRS,
 	})

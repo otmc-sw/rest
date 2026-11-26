@@ -154,9 +154,6 @@ func (a *App) Store() *store.Manager { return a.store }
 // serves until SIGINT/SIGTERM. It blocks.
 func (a *App) Runner() error {
 	a.parseCLI()
-	if err := a.prepare(); err != nil {
-		return err
-	}
 	if a.cfg.Banner != "" {
 		if bannerContent, err := os.ReadFile(a.cfg.Banner); err == nil {
 			fmt.Println(string(bannerContent))
@@ -164,11 +161,17 @@ func (a *App) Runner() error {
 			logger.Warn("⚠️  Could not read banner file: %v", err)
 		}
 	}
+
+	logger.Info("✨ Initializing %s...", a.cfg.Name)
+
+	if err := a.Prepare(); err != nil {
+		return err
+	}
+
 	if a.cfg.Debug {
 		logger.SetLevel(logger.DebugLevel)
 		logger.Debug("🐛 Debug mode enabled.")
 	}
-	logger.Info("✨ Initializing %s...", a.cfg.Name)
 	if err := a.Initializer(); err != nil {
 		return err
 	}
@@ -192,9 +195,9 @@ func (a *App) Runner() error {
 	return a.fiber.ShutdownWithContext(ctx)
 }
 
-// prepare creates InitialDirs and configures file logging before anything else
+// Prepare creates InitialDirs and configures file logging before anything else
 // runs, so startup logs are captured too.
-func (a *App) prepare() error {
+func (a *App) Prepare() error {
 	for _, dir := range a.cfg.InitialDirs {
 		if dir == "" {
 			continue
