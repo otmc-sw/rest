@@ -74,6 +74,7 @@ func mountResource(app *fiber.App, prefix string, repo *store.Repository) {
 	app.Post(base, h.create)
 	app.Put(base+"/:id", h.update)
 	app.Patch(base+"/:id", h.patch)
+	app.Patch(base, h.updateMany)
 	app.Delete(base+"/:id", h.delete)
 	app.Delete(base, h.deleteMany)
 }
@@ -163,6 +164,56 @@ func (h *handlers) patch(c *fiber.Ctx) error {
 	return response.OK[any](ctx).Data(sanitize(inst, h.repo.Model())).Send()
 }
 
+func (h *handlers) updateMany(c *fiber.Ctx) error {
+	ctx := newFiberContext(c)
+	if items, ok := updateItemsPayload(c.Body()); ok {
+		n, err := h.repo.UpdateManyItems(c.Context(), items)
+		if err != nil {
+			return h.fail(ctx, err)
+		}
+		return response.OK[any](ctx).Data(map[string]any{"updated": n}).Send()
+	}
+	ids, err := h.parseIDs(c)
+	if err != nil {
+		return badRequest(ctx, err)
+	}
+	n, err := h.repo.UpdateMany(c.Context(), ids, c.Body())
+	if err != nil {
+		return h.fail(ctx, err)
+	}
+	return response.OK[any](ctx).Data(map[string]any{"updated": n}).Send()
+}
+
+// updateItemsPayload detects a per-record update payload: either a bare JSON
+// array of {id, ...fields} objects or an object wrapping them under "items".
+// Returns ok=false for the legacy flat-body + ?ids= form.
+func updateItemsPayload(body []byte) ([]json.RawMessage, bool) {
+	trimmed := bytes.TrimSpace(body)
+	if len(trimmed) == 0 {
+		return nil, false
+	}
+	if trimmed[0] == '[' {
+		var items []json.RawMessage
+		if err := json.Unmarshal(trimmed, &items); err != nil {
+			return nil, false
+		}
+		return items, true
+	}
+	var probe map[string]json.RawMessage
+	if err := json.Unmarshal(trimmed, &probe); err != nil {
+		return nil, false
+	}
+	raw, ok := probe["items"]
+	if !ok {
+		return nil, false
+	}
+	var items []json.RawMessage
+	if err := json.Unmarshal(raw, &items); err != nil {
+		return nil, false
+	}
+	return items, true
+}
+
 func (h *handlers) delete(c *fiber.Ctx) error {
 	ctx := newFiberContext(c)
 	id, err := h.parseID(c)
@@ -177,9 +228,22 @@ func (h *handlers) delete(c *fiber.Ctx) error {
 
 func (h *handlers) deleteMany(c *fiber.Ctx) error {
 	ctx := newFiberContext(c)
+	ids, err := h.parseIDs(c)
+	if err != nil {
+		return badRequest(ctx, err)
+	}
+	n, err := h.repo.DeleteMany(c.Context(), ids)
+	if err != nil {
+		return h.fail(ctx, err)
+	}
+	return response.OK[any](ctx).Data(map[string]any{"deleted": n}).Send()
+}
+
+// parseIDs parses the comma-separated "ids" query parameter.
+func (h *handlers) parseIDs(c *fiber.Ctx) ([]any, error) {
 	raw := query(c, "ids")
 	if raw == "" {
-		return badRequest(ctx, fmt.Errorf("ids query parameter is required"))
+		return nil, fmt.Errorf("ids query parameter is required")
 	}
 	parts := strings.Split(raw, ",")
 	ids := make([]any, 0, len(parts))
@@ -190,15 +254,11 @@ func (h *handlers) deleteMany(c *fiber.Ctx) error {
 		}
 		id, err := h.repo.ParseID(p)
 		if err != nil {
-			return badRequest(ctx, err)
+			return nil, err
 		}
 		ids = append(ids, id)
 	}
-	n, err := h.repo.DeleteMany(c.Context(), ids)
-	if err != nil {
-		return h.fail(ctx, err)
-	}
-	return response.OK[any](ctx).Data(map[string]any{"deleted": n}).Send()
+	return ids, nil
 }
 
 func (h *handlers) parseID(c *fiber.Ctx) (any, error) {

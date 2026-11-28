@@ -151,11 +151,28 @@ func TestCRUDLifecycle(t *testing.T) {
 		t.Fatalf("put user: %d %s", resp.StatusCode, b)
 	}
 
-	// delete many
 	resp, b = do(t, app, "POST", "/api/test_user", `{"name":"Carol","email":"c@x.com"}`)
 	if resp.StatusCode != 201 {
 		t.Fatalf("create user2: %d %s", resp.StatusCode, b)
 	}
+
+	// update many
+	resp, b = do(t, app, "PATCH", "/api/test_user?ids=1,2", `{"name":"Bulk"}`)
+	if resp.StatusCode != 200 || !strings.Contains(string(b), `"updated":2`) {
+		t.Fatalf("update many: %d %s", resp.StatusCode, b)
+	}
+	resp, b = do(t, app, "GET", "/api/test_user/2", "")
+	if resp.StatusCode != 200 || !strings.Contains(string(b), `"Bulk"`) {
+		t.Fatalf("get patched user2: %d %s", resp.StatusCode, b)
+	}
+
+	// missing ids -> 400
+	resp, b = do(t, app, "PATCH", "/api/test_user", `{"name":"X"}`)
+	if resp.StatusCode != 400 {
+		t.Fatalf("update many without ids: %d %s", resp.StatusCode, b)
+	}
+
+	// delete many
 	resp, b = do(t, app, "DELETE", "/api/test_user?ids=2", "")
 	if resp.StatusCode != 200 || !strings.Contains(string(b), `"deleted":1`) {
 		t.Fatalf("delete many: %d %s", resp.StatusCode, b)

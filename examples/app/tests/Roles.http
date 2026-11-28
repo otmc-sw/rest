@@ -58,6 +58,14 @@ Content-Type: application/json
   "description": "Patched description"
 }
 
+### Patch multiple Roles by ids (PATCH - partial update)
+PATCH {{baseUrl}}/role?ids={{createdId}},{{CreateRole2.response.body.data.id}}
+Content-Type: application/json
+
+{
+  "description": "Bulk patched description"
+}
+
 ### Create a Role with duplicate name (unique violation -> 409)
 POST {{baseUrl}}/role
 Content-Type: application/json

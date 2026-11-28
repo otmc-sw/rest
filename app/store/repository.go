@@ -164,13 +164,18 @@ func (r *Repository) Update(ctx context.Context, id any, body []byte) (any, erro
 
 // Patch applies only the fields present in the JSON body (PATCH semantics).
 func (r *Repository) Patch(ctx context.Context, id any, body []byte) (any, error) {
-	existing, err := r.Get(ctx, id)
-	if err != nil {
-		return nil, err
-	}
 	raw := map[string]json.RawMessage{}
 	if err := json.Unmarshal(body, &raw); err != nil {
 		return nil, fmt.Errorf("invalid request body: %w", err)
+	}
+	return r.patchRecord(ctx, id, raw)
+}
+
+// patchRecord applies a decoded partial update to a single record.
+func (r *Repository) patchRecord(ctx context.Context, id any, raw map[string]json.RawMessage) (any, error) {
+	existing, err := r.Get(ctx, id)
+	if err != nil {
+		return nil, err
 	}
 	ev := reflect.ValueOf(existing).Elem()
 	for key, val := range raw {
@@ -217,6 +222,70 @@ func (r *Repository) Patch(ctx context.Context, id any, body []byte) (any, error
 	return existing, nil
 }
 
+// UpdateMany applies PATCH semantics to every record in ids.
+// Returns the number of records updated; stops at the first error.
+func (r *Repository) UpdateMany(ctx context.Context, ids []any, body []byte) (int64, error) {
+	if len(ids) == 0 {
+		return 0, nil
+	}
+	raw := map[string]json.RawMessage{}
+	if err := json.Unmarshal(body, &raw); err != nil {
+		return 0, fmt.Errorf("invalid request body: %w", err)
+	}
+	var updated int64
+	for _, id := range ids {
+		if _, err := r.patchRecord(ctx, id, raw); err != nil {
+			return updated, err
+		}
+		updated++
+	}
+	return updated, nil
+}
+
+// UpdateManyItems applies PATCH semantics per record. Each item must be a JSON
+// object containing the record's primary key (by JSON name) plus the fields to
+// update, e.g. [{"id": 1, "name": "a"}, {"id": 2, "name": "b"}].
+// Returns the number of records updated; stops at the first error.
+func (r *Repository) UpdateManyItems(ctx context.Context, items []json.RawMessage) (int64, error) {
+	if len(items) == 0 {
+		return 0, nil
+	}
+	key := "id"
+	if r.model.Primary != nil && r.model.Primary.JSONName != "" {
+		key = r.model.Primary.JSONName
+	}
+	var updated int64
+	for _, item := range items {
+		raw := map[string]json.RawMessage{}
+		if err := json.Unmarshal(item, &raw); err != nil {
+			return updated, fmt.Errorf("invalid update item: %w", err)
+		}
+		idRaw, ok := raw[key]
+		if !ok {
+			return updated, fmt.Errorf("update item missing primary key %q", key)
+		}
+		id, err := r.ParseID(rawToString(idRaw))
+		if err != nil {
+			return updated, err
+		}
+		if _, err := r.patchRecord(ctx, id, raw); err != nil {
+			return updated, err
+		}
+		updated++
+	}
+	return updated, nil
+}
+
+// rawToString converts a JSON scalar (string or number) to its plain string
+// form so it can be fed to ParseID.
+func rawToString(raw json.RawMessage) string {
+	var s string
+	if err := json.Unmarshal(raw, &s); err == nil {
+		return s
+	}
+	return string(raw)
+}
+
 // Delete removes one record by primary key.
 func (r *Repository) Delete(ctx context.Context, id any) error {
 	res := r.base(ctx).Where(r.pkCond(), id).Delete(r.newInstance())
@@ -248,9 +317,9 @@ func (r *Repository) ParseID(s string) (any, error) {
 
 func (r *Repository) pkCond() string {
 	if r.model.Primary != nil {
-		return r.model.Primary.DBName
+		return r.quote(r.model.Primary.DBName)
 	}
-	return "id"
+	return r.quote("id")
 }
 
 func (r *Repository) setPrimary(inst any, id any) {
@@ -276,7 +345,7 @@ func (r *Repository) applyQuery(ctx context.Context, q Query) (*gorm.DB, error) 
 		if err != nil {
 			return nil, fmt.Errorf("invalid filter %q: %w", key, err)
 		}
-		db = db.Where(f.DBName+" = ?", val)
+		db = db.Where(r.quote(f.DBName)+" = ?", val)
 	}
 	if q.Keyword != "" {
 		like := "%" + q.Keyword + "%"
@@ -284,7 +353,7 @@ func (r *Repository) applyQuery(ctx context.Context, q Query) (*gorm.DB, error) 
 		args := []any{}
 		for _, f := range r.model.Fields {
 			if f.Kind == reflect.String {
-				clauses = append(clauses, f.DBName+" LIKE ?")
+				clauses = append(clauses, r.quote(f.DBName)+" LIKE ?")
 				args = append(args, like)
 			}
 		}
@@ -311,7 +380,14 @@ func (r *Repository) sortClause(q Query) (string, bool) {
 	if strings.EqualFold(q.Order, "desc") {
 		order = "DESC"
 	}
-	return f.DBName + " " + order, true
+	return r.quote(f.DBName) + " " + order, true
+}
+
+// quote returns the dialect-quoted column name so reserved words (e.g.
+// "group", "key") work as filters, sort keys and primary-key conditions.
+func (r *Repository) quote(name string) string {
+	stmt := &gorm.Statement{DB: r.db}
+	return stmt.Quote(name)
 }
 
 // validate enforces required fields on write.
@@ -343,9 +419,9 @@ func (r *Repository) checkUnique(ctx context.Context, inst any, excludeID any) e
 		if !fv.IsValid() || isZero(fv) {
 			continue
 		}
-		q := r.base(ctx).Model(r.newInstance()).Where(f.DBName+" = ?", fv.Interface())
+		q := r.base(ctx).Model(r.newInstance()).Where(r.quote(f.DBName)+" = ?", fv.Interface())
 		if excludeID != nil && r.model.Primary != nil {
-			q = q.Where("NOT ("+r.model.Primary.DBName+" = ?)", excludeID)
+			q = q.Where("NOT ("+r.quote(r.model.Primary.DBName)+" = ?)", excludeID)
 		}
 		var count int64
 		if res := q.Count(&count); res.Error != nil {

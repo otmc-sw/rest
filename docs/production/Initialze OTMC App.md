@@ -324,6 +324,7 @@ For every registered model `X` with route `x` (singular snake_case), OTMC genera
 | `POST`   | `/api/x`         | Create a record                 |
 | `PUT`    | `/api/xs/:id`     | Full update (replace)           |
 | `PATCH`  | `/api/xs/:id`     | Partial update                  |
+| `PATCH`  | `/api/xs?ids=…`   | Partial update many records     |
 | `DELETE` | `/api/xs/:id`     | Delete one record               |
 | `DELETE` | `/api/xs?ids=…`   | Delete many records             |
 
